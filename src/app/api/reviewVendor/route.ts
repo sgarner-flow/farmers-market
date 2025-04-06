@@ -2,15 +2,10 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import OpenAI from 'openai';
 
-// Check for OpenAI API key
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('OPENAI_API_KEY is not set');
-}
-
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Check for OpenAI API key - but don't throw during build time
+const openai = process.env.OPENAI_API_KEY 
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +16,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Application ID is required' },
         { status: 400 }
+      );
+    }
+
+    // Verify OpenAI client is initialized at runtime
+    if (!openai) {
+      return NextResponse.json(
+        { error: 'OPENAI_API_KEY is not set' },
+        { status: 500 }
       );
     }
 
