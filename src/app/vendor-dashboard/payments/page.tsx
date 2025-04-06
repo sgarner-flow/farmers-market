@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { 
   BarChart, 
   Bar, 
+  LineChart,
+  Line,
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -13,7 +15,7 @@ import {
   Legend, 
   ResponsiveContainer
 } from 'recharts';
-import { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
+import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 
 // Types for the API response
 type VendorPaymentData = {
@@ -473,28 +475,28 @@ export default function VendorPaymentsPage() {
 
                     {/* Hourly Transaction Chart */}
                     <div className="mb-6">
-                      <h4 className="text-sm font-medium text-gray-700 mb-4">Hourly Sales Volume</h4>
+                      <h4 className="text-sm font-medium text-gray-700 mb-4">Hourly Sales Volume (9 AM - 9 PM)</h4>
                       <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart
-                            data={vendor.hourly_data}
+                          <LineChart
+                            data={vendor.hourly_data.filter(data => data.hour >= 9 && data.hour <= 21)} // Filter for 9 AM to 9 PM
                             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                           >
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="hour" tickFormatter={formatHour} />
-                            <YAxis tickFormatter={(value) => `$${Math.round(value)}`} />
+                            <YAxis tickFormatter={(value: number) => `$${Math.round(value)}`} />
                             <Tooltip 
-                              formatter={(value: ValueType, name: NameType) => {
+                              formatter={(value: number | string, name: string) => {
                                 if (name === 'volume') return [formatCurrency(value as number), 'Sales Volume'];
                                 if (name === 'count') return [value, 'Transaction Count'];
                                 return [value, name];
                               }}
-                              labelFormatter={(label) => `Hour: ${formatHour(label as number)}`}
+                              labelFormatter={(label: number) => `Hour: ${formatHour(label)}`}
                             />
                             <Legend />
-                            <Bar dataKey="volume" name="Sales Volume" fill="#82ca9d" />
-                            <Bar dataKey="count" name="Transactions" fill="#8884d8" />
-                          </BarChart>
+                            <Line type="monotone" dataKey="volume" name="Sales Volume" stroke="#82ca9d" activeDot={{ r: 8 }} />
+                            <Line type="monotone" dataKey="count" name="Transactions" stroke="#8884d8" activeDot={{ r: 6 }} />
+                          </LineChart>
                         </ResponsiveContainer>
                       </div>
                     </div>
