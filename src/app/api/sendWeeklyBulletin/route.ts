@@ -36,7 +36,7 @@ const emailTemplate = (newVendors: string[]) => `
             <td align="center" style="padding: 20px 0;">
               <!-- Flow logo image -->
               <div style="max-width: 250px; margin: 0 auto;">
-                <img src="cid:flow-header" alt="Flow Farmers Market" style="display: block; width: 100%; max-width: 250px; height: auto;">
+                <img src="https://flowfarmersmarket.vercel.app/flow-logo.svg" alt="Flow Farmers Market" style="display: block; width: 100%; max-width: 250px; height: auto;">
               </div>
             </td>
           </tr>
@@ -79,18 +79,13 @@ const emailTemplate = (newVendors: string[]) => `
                 </ul>
               </div>
               
-              <div style="text-align: center; padding: 20px 0;">
-                <!-- Divider image -->
-                <div style="max-width: 96px; margin: 0 auto;">
-                  <img src="cid:divider-padded" alt="Divider" style="display: block; width: 100%; max-width: 96px; height: auto;">
-                </div>
-              </div>
+              <hr style="border: 0; height: 1px; background-color: #DDD; margin: 20px 0;">
               
               <!-- Footer -->
               <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #DDD; text-align: center; color: #666666; font-size: 12px;">
                 <!-- Footer image -->
                 <div style="max-width: 150px; margin: 0 auto 15px auto;">
-                  <img src="cid:oneness-light" alt="Flow Farmers Market Footer" style="display: block; width: 100%; max-width: 150px; height: auto;">
+                  <img src="https://flowfarmersmarket.vercel.app/flow-footer.svg" alt="Flow Farmers Market Footer" style="display: block; width: 100%; max-width: 150px; height: auto;">
                 </div>
                 <p style="margin-bottom: 8px;">If you have any questions, please contact us at sgarns@gmail.com</p>
                 <p style="margin-bottom: 8px;">© ${new Date().getFullYear()} Flow Farmers Market. All rights reserved.</p>
@@ -152,29 +147,14 @@ export async function POST(request: Request) {
           },
           subject: 'Flow Farmers Market Weekly Bulletin',
           html: emailTemplate(newVendorsList),
-          attachments: [
-            {
-              filename: 'Flow-Header.png',
-              type: 'image/png',
-              content_id: 'flow-header',
-              content: readPublicFile('public/Flow-Header.png').toString('base64'),
-              disposition: 'inline'
+          trackingSettings: {
+            clickTracking: {
+              enable: true
             },
-            {
-              filename: 'Dividier-Padded.png',
-              type: 'image/png', 
-              content_id: 'divider-padded',
-              content: readPublicFile('public/Dividier-Padded.png').toString('base64'),
-              disposition: 'inline'
-            },
-            {
-              filename: 'Oneness_-_light_1.png',
-              type: 'image/png',
-              content_id: 'oneness-light',
-              content: readPublicFile('public/Oneness_-_light_1.png').toString('base64'),
-              disposition: 'inline'
+            openTracking: {
+              enable: true
             }
-          ]
+          }
         };
 
         await sgMail.send(msg);

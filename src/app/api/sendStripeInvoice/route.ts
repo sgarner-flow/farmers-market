@@ -137,6 +137,7 @@ export async function POST(request: Request) {
     });
 
     // Prepare and send email with the correct links
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const emailHtml = `
     <!DOCTYPE html>
     <html lang="en-US">
@@ -155,9 +156,9 @@ export async function POST(request: Request) {
               <!-- Header section with logo -->
               <tr>
                 <td align="center" style="padding: 20px 0;">
-                  <!-- Flow logo image -->
+                  <!-- Flow logo image: Using a web-hosted image that's reliable -->
                   <div style="max-width: 250px; margin: 0 auto;">
-                    <img src="cid:flow-header" alt="Flow Farmers Market" style="display: block; width: 100%; max-width: 250px; height: auto;">
+                    <img src="https://flowfarmersmarket.vercel.app/flow-logo.svg" alt="Flow Farmers Market" style="display: block; width: 100%; max-width: 250px; height: auto;">
                   </div>
                 </td>
               </tr>
@@ -187,21 +188,16 @@ export async function POST(request: Request) {
                   
                   <p style="margin-bottom: 16px;">If you have any questions or need assistance, please contact us at <a href="mailto:sgarns@gmail.com" style="color: #4A8233; text-decoration: underline;">sgarns@gmail.com</a>.</p>
                   
-                  <div style="text-align: center; padding: 20px 0;">
-                    <!-- Divider image -->
-                    <div style="max-width: 96px; margin: 0 auto;">
-                      <img src="cid:divider-padded" alt="Divider" style="display: block; width: 100%; max-width: 96px; height: auto;">
-                    </div>
-                  </div>
+                  <!-- No divider image needed -->
                 </td>
               </tr>
               
               <!-- Footer section -->
               <tr>
                 <td style="padding: 20px; text-align: center; color: #666666; font-size: 12px; border-top: 1px solid #DDD;">
-                  <!-- Footer image -->
+                  <!-- Footer image: Using a web-hosted image that's reliable -->
                   <div style="max-width: 150px; margin: 0 auto 15px auto;">
-                    <img src="cid:oneness-light" alt="Flow Farmers Market Footer" style="display: block; width: 100%; max-width: 150px; height: auto;">
+                    <img src="https://flowfarmersmarket.vercel.app/flow-footer.svg" alt="Flow Farmers Market Footer" style="display: block; width: 100%; max-width: 150px; height: auto;">
                   </div>
                   <p style="margin-bottom: 8px;">Best regards,<br>Flow Farmers Market Team</p>
                   <p style="margin-bottom: 8px;">© ${new Date().getFullYear()} Flow Farmers Market. All rights reserved.</p>
@@ -220,31 +216,7 @@ export async function POST(request: Request) {
     try {
       console.log('Preparing to send email...');
       
-      // Safely read image files with fallbacks
-      const getImageBase64 = (filePath: string) => {
-        try {
-          // First try to read the file from the public directory
-          const fileContent = readPublicFile(filePath);
-          console.log(`Successfully read image file: ${filePath}`);
-          return fileContent.toString('base64');
-        } catch (err) {
-          console.warn(`Could not read image file at ${filePath}:`, err);
-          // Return a 1x1 transparent pixel as fallback
-          return 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
-        }
-      };
-      
-      // Create correctly formatted base64 image data
-      const flowHeaderBase64 = getImageBase64('public/Flow-Header.png');
-      const dividerBase64 = getImageBase64('public/Dividier-Padded.png');
-      const onenessBase64 = getImageBase64('public/Oneness_-_light_1.png');
-      
-      console.log('Image loading status:', {
-        flowHeader: flowHeaderBase64.length > 100 ? 'loaded' : 'failed',
-        divider: dividerBase64.length > 100 ? 'loaded' : 'failed',
-        oneness: onenessBase64.length > 100 ? 'loaded' : 'failed'
-      });
-      
+      // Create simple email with direct image URLs rather than attachments
       const msg = {
         to: email,
         from: {
@@ -260,30 +232,7 @@ export async function POST(request: Request) {
           openTracking: {
             enable: true
           }
-        },
-        attachments: [
-          {
-            filename: 'Flow-Header.png',
-            type: 'image/png',
-            content_id: 'flow-header',
-            content: flowHeaderBase64,
-            disposition: 'inline'
-          },
-          {
-            filename: 'Dividier-Padded.png',
-            type: 'image/png', 
-            content_id: 'divider-padded',
-            content: dividerBase64,
-            disposition: 'inline'
-          },
-          {
-            filename: 'Oneness-Light.png',
-            type: 'image/png',
-            content_id: 'oneness-light',
-            content: onenessBase64,
-            disposition: 'inline'
-          }
-        ]
+        }
       };
 
       // Send email
