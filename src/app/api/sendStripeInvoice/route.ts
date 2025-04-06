@@ -131,13 +131,13 @@ export async function POST(request: Request) {
     console.log('Creating account setup link...');
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
-      refresh_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/refreshStripeLink?accountId=${account.id}`,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/vendor-apply-complete?success=true`,
+      refresh_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://flowfarmersmarket.vercel.app'}/api/refreshStripeLink?accountId=${account.id}`,
+      return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://flowfarmersmarket.vercel.app'}/vendor-apply-complete?success=true`,
       type: 'account_onboarding',
     });
 
     // Prepare and send email with the correct links
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://flowfarmersmarket.vercel.app';
     const emailHtml = `
     <!DOCTYPE html>
     <html lang="en-US">

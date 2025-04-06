@@ -35,7 +35,7 @@ const emailTemplate = (vendorName: string) => `
             <td align="center" style="padding: 20px 0;">
               <!-- Flow logo image -->
               <div style="max-width: 250px; margin: 0 auto;">
-                <img src="cid:flow-header" alt="Flow Farmers Market" style="display: block; width: 100%; max-width: 250px; height: auto;">
+                <img src="https://flowfarmersmarket.vercel.app/flow-logo.svg" alt="Flow Farmers Market" style="display: block; width: 100%; max-width: 250px; height: auto;">
               </div>
             </td>
           </tr>
@@ -61,7 +61,7 @@ const emailTemplate = (vendorName: string) => `
               <p style="margin-bottom: 16px;">We're looking for vendors who share our values of sustainability, quality, and community connection.</p>
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/#apply" style="display: inline-block; background-color: #71725E; color: white; padding: 14px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 16px;">Apply to Become a Vendor</a>
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://flowfarmersmarket.vercel.app'}/#apply" style="display: inline-block; background-color: #71725E; color: white; padding: 14px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 16px;">Apply to Become a Vendor</a>
               </div>
               
               <p style="margin-bottom: 16px;">If you have any questions about the application process or our market, please don't hesitate to reach out to us at <a href="mailto:sgarns@gmail.com" style="color: #4A8233; text-decoration: underline;">sgarns@gmail.com</a>.</p>
@@ -77,7 +77,7 @@ const emailTemplate = (vendorName: string) => `
             <td style="padding: 20px; text-align: center; color: #666666; font-size: 12px; border-top: 1px solid #DDD;">
               <!-- Footer image -->
               <div style="max-width: 150px; margin: 0 auto 15px auto;">
-                <img src="cid:oneness-light" alt="Flow Farmers Market Footer" style="display: block; width: 100%; max-width: 150px; height: auto;">
+                <img src="https://flowfarmersmarket.vercel.app/flow-footer.svg" alt="Flow Farmers Market Footer" style="display: block; width: 100%; max-width: 150px; height: auto;">
               </div>
               <p style="margin-bottom: 8px;">© ${new Date().getFullYear()} Flow Farmers Market. All rights reserved.</p>
               <p style="margin-bottom: 0;">698 NE 1st Avenue, Miami, FL 33132</p>
@@ -174,22 +174,14 @@ export async function POST(request: Request) {
           subject: 'You\'re Invited to Join Flow Farmers Market',
           html: emailTemplate(vendor.name || ''),
           text: emailTemplate(vendor.name || '').replace(/<[^>]*>/g, ''),
-          attachments: [
-            {
-              filename: 'Flow-Header.png',
-              type: 'image/png',
-              content_id: 'flow-header',
-              content: readPublicFile('public/Flow-Header.png').toString('base64'),
-              disposition: 'inline'
+          trackingSettings: {
+            clickTracking: {
+              enable: true
             },
-            {
-              filename: 'Oneness_-_light_1.png',
-              type: 'image/png',
-              content_id: 'oneness-light',
-              content: readPublicFile('public/Oneness_-_light_1.png').toString('base64'),
-              disposition: 'inline'
+            openTracking: {
+              enable: true
             }
-          ]
+          }
         };
         
         await sgMail.send(msg);

@@ -452,6 +452,9 @@ export async function GET(request: Request) {
       }));
     }
 
+    // Sort vendors by total transaction volume (highest to lowest)
+    vendorPaymentData.sort((a, b) => b.summary.total_volume - a.summary.total_volume);
+
     // Return the results
     return NextResponse.json({
       success: true,

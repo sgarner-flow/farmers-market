@@ -181,14 +181,23 @@ Provide your decision and detailed explanation.`
         console.log('Application approved, attempting to send Stripe invoice...');
         
         // Determine base URL for the API call
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'http://localhost:3000';
-        const apiUrl = `${baseUrl.replace(/\/$/, '')}/api/sendStripeInvoice`;
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL;
+        if (!baseUrl) {
+          throw new Error('Neither NEXT_PUBLIC_APP_URL nor VERCEL_URL environment variables are set');
+        }
+        
+        // Make sure baseUrl does not have a trailing slash and use HTTPS
+        let apiUrl = baseUrl.replace(/\/$/, '');
+        if (!apiUrl.startsWith('http')) {
+          apiUrl = `https://${apiUrl}`;
+        }
+        apiUrl = `${apiUrl}/api/sendStripeInvoice`;
         
         console.log('Sending Stripe invoice to:', apiUrl);
         
         // Create an AbortController for the fetch request
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
         
         try {
           const response = await fetch(apiUrl, {

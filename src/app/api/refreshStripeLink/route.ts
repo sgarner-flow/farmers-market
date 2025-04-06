@@ -14,8 +14,9 @@ export async function GET(request: Request) {
     const accountId = url.searchParams.get('accountId');
 
     if (!accountId) {
+      console.error('Missing account ID in request');
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/vendor-dashboard?error=missing_account_id`
+        `${process.env.NEXT_PUBLIC_APP_URL || 'https://flowfarmersmarket.vercel.app'}/vendor-dashboard?error=missing_account_id`
       );
     }
 
@@ -23,15 +24,15 @@ export async function GET(request: Request) {
     if (!stripe) {
       console.error('STRIPE_SECRET_KEY is not set');
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/vendor-dashboard?error=stripe_configuration`
+        `${process.env.NEXT_PUBLIC_APP_URL || 'https://flowfarmersmarket.vercel.app'}/vendor-dashboard?error=stripe_configuration`
       );
     }
 
     // Create a new account link
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
-      refresh_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/refreshStripeLink?accountId=${accountId}`,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/vendor-apply-complete?success=true`,
+      refresh_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://flowfarmersmarket.vercel.app'}/api/refreshStripeLink?accountId=${accountId}`,
+      return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://flowfarmersmarket.vercel.app'}/vendor-apply-complete?success=true`,
       type: 'account_onboarding',
     });
 
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
     
     // Redirect to vendor dashboard with error
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/vendor-dashboard?error=refresh_failed&message=${encodeURIComponent(error.message || 'Unknown error')}`
+      `${process.env.NEXT_PUBLIC_APP_URL || 'https://flowfarmersmarket.vercel.app'}/vendor-dashboard?error=refresh_failed&message=${encodeURIComponent(error.message || 'Unknown error')}`
     );
   }
 } 
