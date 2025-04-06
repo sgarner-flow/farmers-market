@@ -8,6 +8,9 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? createStripeClient(process.env.STRIPE_SECRET_KEY)
   : null;
 
+// Increased timeout for Stripe API requests (in milliseconds)
+const STRIPE_REQUEST_TIMEOUT = 60000; // 60 seconds
+
 export async function GET(request: Request) {
   console.log('getVendorPayments endpoint called');
   
@@ -24,6 +27,11 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const date = url.searchParams.get('date');
     const specificAccount = url.searchParams.get('account');
+    const paymentId = url.searchParams.get('payment');
+    
+    // Pagination parameters
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const limit = parseInt(url.searchParams.get('limit') || '10');
     
     if (!date) {
       console.error('Date parameter is missing');
@@ -33,7 +41,7 @@ export async function GET(request: Request) {
       );
     }
 
-    console.log(`Fetching payment data for date: ${date}`);
+    console.log(`Fetching payment data for date: ${date}, page: ${page}, limit: ${limit}`);
     if (specificAccount) {
       console.log(`Looking for specific account: ${specificAccount}`);
     }
@@ -58,15 +66,59 @@ export async function GET(request: Request) {
     console.log(`Extended date range: ${startOfDay.toISOString()} to ${endOfDay.toISOString()}`);
     console.log(`Timestamps: ${startTimestamp} to ${endTimestamp}`);
 
-    // Fetch ALL connected accounts directly from Stripe
-    console.log('Fetching connected accounts directly from Stripe');
+    // Direct lookup of the specified payment if provided
+    let directPaymentResult = null;
+    if (paymentId && specificAccount) {
+      try {
+        console.log(`Attempting direct lookup of payment: ${paymentId} on account: ${specificAccount}`);
+        const payment = await Promise.race([
+          stripe.paymentIntents.retrieve(
+            paymentId,
+            { stripeAccount: specificAccount }
+          ),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Payment retrieval timeout')), STRIPE_REQUEST_TIMEOUT)
+          )
+        ]) as Stripe.PaymentIntent;
+        
+        directPaymentResult = {
+          id: payment.id,
+          amount: payment.amount / 100,
+          status: payment.status,
+          created: new Date(payment.created * 1000).toISOString(),
+          account: specificAccount
+        };
+        console.log(`Found payment directly: ${JSON.stringify(directPaymentResult)}`);
+      } catch (err) {
+        console.error(`Error looking up payment directly:`, err);
+      }
+    }
+
+    // If only looking up a specific payment, return early
+    if (paymentId && specificAccount && directPaymentResult) {
+      return NextResponse.json({
+        success: true,
+        date: selectedDate.toISOString(),
+        vendors: [],
+        directPaymentResult,
+      });
+    }
+
+    // Fetch connected accounts (with pagination if not looking for a specific account)
+    console.log('Fetching connected accounts from Stripe');
     let stripeAccounts: Stripe.Account[] = [];
     
     try {
       if (specificAccount) {
         // If looking for a specific account, fetch just that one
         try {
-          const account = await stripe.accounts.retrieve(specificAccount);
+          const account = await Promise.race([
+            stripe.accounts.retrieve(specificAccount),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Account retrieval timeout')), STRIPE_REQUEST_TIMEOUT)
+            )
+          ]) as Stripe.Account;
+          
           stripeAccounts = [account];
           console.log(`Found specific account: ${account.id}`);
         } catch (err) {
@@ -74,10 +126,19 @@ export async function GET(request: Request) {
           stripeAccounts = [];
         }
       } else {
-        // Otherwise fetch all connected accounts
-        const accounts = await stripe.accounts.list({ limit: 100 });
+        // Otherwise fetch accounts with pagination
+        const accounts = await Promise.race([
+          stripe.accounts.list({ 
+            limit: limit,
+            starting_after: page > 1 ? url.searchParams.get('last_account_id') || undefined : undefined
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Accounts listing timeout')), STRIPE_REQUEST_TIMEOUT)
+          )
+        ]) as Stripe.ApiList<Stripe.Account>;
+        
         stripeAccounts = accounts.data;
-        console.log(`Found ${stripeAccounts.length} connected accounts from Stripe`);
+        console.log(`Found ${stripeAccounts.length} connected accounts from Stripe (page ${page})`);
       }
     } catch (stripeError) {
       console.error('Error fetching Stripe accounts:', stripeError);
@@ -93,7 +154,10 @@ export async function GET(request: Request) {
         success: true,
         date: selectedDate.toISOString(),
         vendors: [],
-        message: 'No vendor accounts found'
+        directPaymentResult,
+        message: 'No vendor accounts found',
+        hasMore: false,
+        page
       });
     }
     
@@ -117,40 +181,17 @@ export async function GET(request: Request) {
       }
     });
 
-    // Direct lookup of the specified payment if provided
-    let directPaymentResult = null;
-    const paymentId = url.searchParams.get('payment');
-    if (paymentId && specificAccount) {
-      try {
-        console.log(`Attempting direct lookup of payment: ${paymentId} on account: ${specificAccount}`);
-        const payment = await stripe.paymentIntents.retrieve(
-          paymentId,
-          { stripeAccount: specificAccount }
-        );
-        directPaymentResult = {
-          id: payment.id,
-          amount: payment.amount / 100,
-          status: payment.status,
-          created: new Date(payment.created * 1000).toISOString(),
-          account: specificAccount
-        };
-        console.log(`Found payment directly: ${JSON.stringify(directPaymentResult)}`);
-      } catch (err) {
-        console.error(`Error looking up payment directly:`, err);
-      }
-    }
-
     // Limit the number of concurrent requests to avoid timeouts
-    const BATCH_SIZE = 5; // Process 5 accounts at a time
+    const BATCH_SIZE = 3; // Process only 3 accounts at a time (reduced from 5)
     
     console.log(`Processing ${stripeAccounts.length} accounts in batches of ${BATCH_SIZE}`);
     
     let vendorPaymentData: any[] = [];
     
-    // Process in batches to avoid overwhelming Stripe API
+    // Process in small batches to avoid overwhelming Stripe API
     for (let i = 0; i < stripeAccounts.length; i += BATCH_SIZE) {
       const batch = stripeAccounts.slice(i, i + BATCH_SIZE);
-      console.log(`Processing batch ${i/BATCH_SIZE + 1} with ${batch.length} accounts`);
+      console.log(`Processing batch ${Math.floor(i/BATCH_SIZE) + 1} with ${batch.length} accounts`);
       
       // Process this batch in parallel
       const batchResults = await Promise.all(
@@ -164,22 +205,29 @@ export async function GET(request: Request) {
             
             console.log(`Fetching payments for account: ${businessName} (${account.id})`);
             
-            // First attempt - Get payment intents
+            // Limit the number of payments to fetch for performance
+            const PAYMENT_FETCH_LIMIT = 50;
+            
+            // First attempt - Get payment intents with timeout
             let paymentIntents;
             try {
-              paymentIntents = await stripe.paymentIntents.list(
-                {
-                  created: {
-                    gte: startTimestamp,
-                    lte: endTimestamp,
+              paymentIntents = await Promise.race([
+                stripe.paymentIntents.list(
+                  {
+                    created: {
+                      gte: startTimestamp,
+                      lte: endTimestamp,
+                    },
+                    limit: PAYMENT_FETCH_LIMIT,
                   },
-                  limit: 100,
-                  expand: ['data.payment_method'],
-                },
-                {
-                  stripeAccount: account.id,
-                }
-              );
+                  {
+                    stripeAccount: account.id,
+                  }
+                ),
+                new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('Payment intents listing timeout')), STRIPE_REQUEST_TIMEOUT)
+                )
+              ]) as Stripe.ApiList<Stripe.PaymentIntent>;
               
               console.log(`Found ${paymentIntents.data.length} payment intents for ${businessName}`);
             } catch (paymentError) {
@@ -192,19 +240,24 @@ export async function GET(request: Request) {
             if (paymentIntents.data.length === 0) {
               console.log(`Attempting to fetch charges directly for account: ${account.id}`);
               try {
-                // Try fetching the charges directly
-                const charges = await stripe.charges.list(
-                  {
-                    created: {
-                      gte: startTimestamp,
-                      lte: endTimestamp,
+                // Try fetching the charges directly with timeout
+                const charges = await Promise.race([
+                  stripe.charges.list(
+                    {
+                      created: {
+                        gte: startTimestamp,
+                        lte: endTimestamp,
+                      },
+                      limit: PAYMENT_FETCH_LIMIT,
                     },
-                    limit: 100,
-                  },
-                  {
-                    stripeAccount: account.id,
-                  }
-                );
+                    {
+                      stripeAccount: account.id,
+                    }
+                  ),
+                  new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Charges listing timeout')), STRIPE_REQUEST_TIMEOUT)
+                  )
+                ]) as Stripe.ApiList<Stripe.Charge>;
                 
                 console.log(`Found ${charges.data.length} charges directly for ${businessName}`);
                 
@@ -244,90 +297,100 @@ export async function GET(request: Request) {
             
             console.log(`After filtering for exact date, found ${filteredTransactions.length} transactions for ${businessName}`);
 
-            // Get the account's balance
-            let balance: Stripe.Balance = { 
-              object: 'balance',
-              available: [],
-              pending: [],
-              connect_reserved: [],
-              livemode: false
-            };
+            // Get the account's balance with timeout
+            let balance: Stripe.Balance;
             try {
-              balance = await stripe.balance.retrieve({
-                stripeAccount: account.id,
-              });
+              balance = await Promise.race([
+                stripe.balance.retrieve({ stripeAccount: account.id }),
+                new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('Balance retrieval timeout')), STRIPE_REQUEST_TIMEOUT)
+                )
+              ]) as Stripe.Balance;
             } catch (balanceError) {
               console.error(`Error fetching balance for account ${account.id}:`, balanceError);
+              balance = { 
+                object: 'balance',
+                available: [],
+                pending: [],
+                connect_reserved: [] as any,
+                instant_available: [] as any,
+                issuing: {} as any,
+                livemode: true
+              };
             }
 
-            // Calculate total payment volume and transaction count
-            const totalVolume = filteredTransactions.reduce((sum, intent) => {
-              // Only count succeeded payments
-              if (intent.status === 'succeeded') {
-                return sum + intent.amount;
-              }
-              return sum;
-            }, 0) / 100; // Convert cents to dollars
-            
-            const succeededTransactions = filteredTransactions.filter(intent => intent.status === 'succeeded');
-            const transactionCount = succeededTransactions.length;
-            const averageTransactionSize = transactionCount > 0 ? totalVolume / transactionCount : 0;
-
-            // Get hourly breakdown of activity
-            const hourlyData = Array(24).fill(0).map((_, i) => ({
-              hour: i,
+            // Aggregate transactions data for this vendor by hour
+            const hourlyData = Array(24).fill(0).map((_, hour) => ({
+              hour,
               count: 0,
               volume: 0,
             }));
 
-            succeededTransactions.forEach(intent => {
-              const intentDate = new Date(intent.created * 1000);
-              const hour = intentDate.getHours();
-              hourlyData[hour].count += 1;
-              hourlyData[hour].volume += intent.amount / 100; // Convert cents to dollars
+            // Process transactions and populate hourly data
+            filteredTransactions.forEach(transaction => {
+              const txDate = new Date(transaction.created * 1000);
+              const hour = txDate.getHours();
+              
+              // Only include successful transactions in the hourly data
+              if (transaction.status === 'succeeded') {
+                hourlyData[hour].count += 1;
+                hourlyData[hour].volume += transaction.amount / 100;
+              }
             });
 
-            // Show ALL transactions, not just successful ones, to help with debugging
-            const allTransactions = filteredTransactions.map(intent => ({
-              id: intent.id,
-              amount: intent.amount / 100, // Convert cents to dollars
-              status: intent.status,
-              created: new Date(intent.created * 1000).toISOString(),
-              payment_method: intent.payment_method_types[0] || 'unknown',
-              receipt_url: intent.latest_charge ? `https://dashboard.stripe.com/${account.id}/payments/${intent.latest_charge}` : null,
-            }));
+            // Select only a sample of recent transactions to avoid overwhelming the response
+            const recentTransactions = filteredTransactions
+              .slice(0, 10)  // Limit to 10 most recent
+              .map(tx => ({
+                id: tx.id,
+                amount: tx.amount / 100,
+                status: tx.status,
+                created: new Date(tx.created * 1000).toISOString(),
+                payment_method: Array.isArray(tx.payment_method_types) 
+                  ? tx.payment_method_types[0]
+                  : 'unknown',
+                receipt_url: null, // Skip receipt URLs to reduce response size
+              }));
 
+            // Calculate summary data
+            const successfulTransactions = filteredTransactions.filter(tx => tx.status === 'succeeded');
+            const totalVolume = successfulTransactions.reduce((sum, tx) => sum + (tx.amount / 100), 0);
+
+            // Calculate available and pending balances
+            const availableBalance = balance.available.reduce((sum, balance) => sum + balance.amount / 100, 0);
+            const pendingBalance = balance.pending.reduce((sum, balance) => sum + balance.amount / 100, 0);
+            
             return {
               vendor: {
                 id: vendorFromDb?.id || account.id,
                 business_name: businessName,
-                product_type: vendorFromDb?.product_type || 
-                            (account.business_profile && account.business_profile.product_description) || 
-                            'Unknown',
-                email: vendorFromDb?.email || account.email || 'Unknown',
+                product_type: vendorFromDb?.product_type || 'Unknown',
+                email: vendorFromDb?.email || account.email || 'No email',
                 stripe_account_id: account.id,
-                status: vendorFromDb?.status || 'Connected Account',
+                status: vendorFromDb?.status || 'active',
               },
               summary: {
                 total_volume: totalVolume,
-                transaction_count: transactionCount,
-                average_transaction_size: averageTransactionSize,
-                available_balance: balance.available.reduce((sum, balanceItem) => sum + balanceItem.amount, 0) / 100,
-                pending_balance: balance.pending.reduce((sum, balanceItem) => sum + balanceItem.amount, 0) / 100,
+                transaction_count: successfulTransactions.length,
+                average_transaction_size: successfulTransactions.length > 0 
+                  ? totalVolume / successfulTransactions.length 
+                  : 0,
+                available_balance: availableBalance,
+                pending_balance: pendingBalance,
               },
               hourly_data: hourlyData,
-              recent_transactions: allTransactions.slice(0, 10), // Show more transactions and all status types
+              recent_transactions: recentTransactions,
             };
-          } catch (error) {
-            console.error(`Error fetching payment data for account ${account.id}:`, error);
+          } catch (vendorError) {
+            console.error(`Error processing vendor ${account.id}:`, vendorError);
             return {
               vendor: {
                 id: account.id,
-                business_name: (account.business_profile && account.business_profile.name) || `Account ${account.id}`,
-                product_type: (account.business_profile && account.business_profile.product_description) || 'Unknown',
-                email: account.email || 'Unknown',
+                business_name: `Account ${account.id}`,
+                product_type: 'Unknown',
+                email: 'No email',
                 stripe_account_id: account.id,
-                status: 'Connected Account',
+                status: 'error',
               },
               summary: {
                 total_volume: 0,
@@ -336,38 +399,38 @@ export async function GET(request: Request) {
                 available_balance: 0,
                 pending_balance: 0,
               },
-              hourly_data: Array(24).fill(0).map((_, i) => ({
-                hour: i,
-                count: 0,
-                volume: 0,
-              })),
+              hourly_data: Array(24).fill(0).map((_, hour) => ({ hour, count: 0, volume: 0 })),
               recent_transactions: [],
-              error: error instanceof Error ? error.message : 'Unknown error',
+              error: 'Error fetching vendor data',
             };
           }
         })
       );
       
-      vendorPaymentData = [...vendorPaymentData, ...batchResults];
+      // Add results from this batch
+      vendorPaymentData = [...vendorPaymentData, ...batchResults.filter(Boolean)];
     }
 
-    console.log(`Successfully processed ${vendorPaymentData.length} vendor accounts`);
+    // Get the ID of the last account for pagination
+    const lastAccountId = stripeAccounts.length > 0 
+      ? stripeAccounts[stripeAccounts.length - 1].id 
+      : null;
+
+    // Return the results
     return NextResponse.json({
       success: true,
       date: selectedDate.toISOString(),
       vendors: vendorPaymentData,
-      directPaymentResult: directPaymentResult,
+      directPaymentResult,
+      hasMore: !specificAccount && stripeAccounts.length === limit,
+      page,
+      lastAccountId
     });
     
-  } catch (error: any) {
-    console.error('Error in getVendorPayments:', error);
-    console.error('Error details:', {
-      message: error.message,
-      name: error.name,
-      stack: error.stack
-    });
+  } catch (error) {
+    console.error('Unexpected error in getVendorPayments:', error);
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: 'An unexpected error occurred. Please try again.' },
       { status: 500 }
     );
   }

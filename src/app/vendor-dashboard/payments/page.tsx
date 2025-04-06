@@ -61,6 +61,9 @@ type ApiResponse = {
   date: string;
   vendors: VendorPaymentData[];
   directPaymentResult: DirectPaymentResult | null;
+  hasMore: boolean;
+  page: number;
+  lastAccountId?: string;
   error?: string;
 };
 
@@ -73,6 +76,13 @@ export default function VendorPaymentsPage() {
   const [accountId, setAccountId] = useState<string>('');
   const [paymentId, setPaymentId] = useState<string>('');
   const [showLookupForm, setShowLookupForm] = useState<boolean>(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [hasMorePages, setHasMorePages] = useState<boolean>(false);
+  const [lastAccountId, setLastAccountId] = useState<string | undefined>(undefined);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+  const [allVendors, setAllVendors] = useState<VendorPaymentData[]>([]);
 
   // Format hour for X-axis display
   const formatHour = (hour: number) => {
@@ -90,46 +100,116 @@ export default function VendorPaymentsPage() {
   };
 
   // Fetch payment data for the selected date
-  const fetchPaymentData = async (date: string, account?: string, payment?: string) => {
-    setLoading(true);
+  const fetchPaymentData = async (date: string, page: number = 1, account?: string, payment?: string) => {
+    if (page === 1) {
+      setLoading(true);
+      setPaymentData([]);
+      setAllVendors([]);
+      setHasMorePages(false);
+      setLastAccountId(undefined);
+    } else {
+      setIsLoadingMore(true);
+    }
+    
     setError(null);
     
     try {
-      let url = `/api/getVendorPayments?date=${date}`;
+      let url = `/api/getVendorPayments?date=${date}&page=${page}&limit=10`;
       if (account) url += `&account=${account}`;
       if (payment) url += `&payment=${payment}`;
+      if (page > 1 && lastAccountId) url += `&last_account_id=${lastAccountId}`;
       
-      const response = await fetch(url);
-      const data: ApiResponse = await response.json();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30-second timeout
+      
+      const response = await fetch(url, { 
+        signal: controller.signal,
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch payment data');
+        if (response.status === 504) {
+          throw new Error('Request timed out. The server took too long to respond - try a different date or a more specific search.');
+        }
+        const errorText = await response.text();
+        throw new Error(errorText || `Server error (${response.status})`);
       }
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        throw new Error(`Received non-JSON response: ${textResponse.substring(0, 100)}...`);
+      }
+      
+      const data: ApiResponse = await response.json();
       
       if (!data.success) {
         throw new Error(data.error || 'Error in API response');
       }
       
-      setPaymentData(data.vendors);
+      if (page === 1) {
+        setPaymentData(data.vendors);
+        setAllVendors(data.vendors);
+      } else {
+        const newAllVendors = [...allVendors, ...data.vendors];
+        setPaymentData(newAllVendors);
+        setAllVendors(newAllVendors);
+      }
+      
       setDirectPaymentResult(data.directPaymentResult);
+      setHasMorePages(data.hasMore);
+      setLastAccountId(data.lastAccountId);
+      setCurrentPage(data.page);
     } catch (err) {
+      let errorMessage = 'An unknown error occurred';
+      
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          errorMessage = 'Request timed out. The server took too long to respond.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
       console.error('Error fetching payment data:', err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      setPaymentData([]);
-      setDirectPaymentResult(null);
+      setError(errorMessage);
+      
+      // Keep existing data on error if loading more
+      if (page === 1) {
+        setPaymentData([]);
+        setAllVendors([]);
+        setHasMorePages(false);
+      }
     } finally {
-      setLoading(false);
+      if (page === 1) {
+        setLoading(false);
+      } else {
+        setIsLoadingMore(false);
+      }
     }
   };
 
   // Handle form submission for looking up specific accounts/payments
   const handleLookup = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchPaymentData(selectedDate, accountId, paymentId);
+    setCurrentPage(1);
+    setAllVendors([]);
+    fetchPaymentData(selectedDate, 1, accountId, paymentId);
+  };
+  
+  // Handle loading more data
+  const handleLoadMore = () => {
+    fetchPaymentData(selectedDate, currentPage + 1, accountId, paymentId);
   };
 
   // Load data when the component mounts or when the selected date changes
   useEffect(() => {
+    setCurrentPage(1);
+    setAllVendors([]);
     fetchPaymentData(selectedDate);
   }, [selectedDate]);
 
@@ -211,11 +291,35 @@ export default function VendorPaymentsPage() {
                 <button
                   type="submit"
                   className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-market-olive hover:bg-market-olive/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-market-olive"
+                  disabled={loading}
                 >
-                  Look Up
+                  {loading ? 'Searching...' : 'Look Up'}
                 </button>
               </div>
             </form>
+          </div>
+        )}
+
+        {/* Loading Indicator */}
+        {loading && (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-market-green mx-auto"></div>
+            <p className="mt-4 text-market-olive">Fetching payment data...</p>
+            <p className="mt-2 text-sm text-gray-500">This may take a moment if there are many transactions.</p>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && !loading && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
+            <h2 className="text-lg font-medium text-red-800 mb-2">Error</h2>
+            <p className="text-red-700">{error}</p>
+            <button 
+              onClick={() => fetchPaymentData(selectedDate, 1, accountId, paymentId)}
+              className="mt-4 px-4 py-2 bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors"
+            >
+              Try Again
+            </button>
           </div>
         )}
 
@@ -248,15 +352,13 @@ export default function VendorPaymentsPage() {
                               ? 'bg-blue-100 text-blue-800'
                               : directPaymentResult.status === 'requires_payment_method' || directPaymentResult.status === 'requires_confirmation'
                                 ? 'bg-purple-100 text-purple-800'
-                                : directPaymentResult.status === 'canceled' || directPaymentResult.status === 'failed'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-gray-100 text-gray-800'
+                                : 'bg-red-100 text-red-800'
                       }`}>
                         {directPaymentResult.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {format(new Date(directPaymentResult.created), 'PPP p')}
+                      {new Date(directPaymentResult.created).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{directPaymentResult.account}</td>
                   </tr>
@@ -266,160 +368,135 @@ export default function VendorPaymentsPage() {
           </div>
         )}
 
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-market-green"></div>
-          </div>
-        ) : error ? (
-          <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-8">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-red-700">
-                  {error}
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : paymentData.length === 0 ? (
-          <div className="bg-white shadow rounded-lg p-8 text-center">
-            <h3 className="text-lg font-medium text-gray-900">No vendor payment data available</h3>
-            <p className="mt-2 text-sm text-gray-500">
-              There is no payment data for vendors on {format(new Date(selectedDate), 'MMMM d, yyyy')}.
+        {!loading && paymentData.length === 0 && !error && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+            <h2 className="text-lg font-medium text-blue-800">No Payment Data Found</h2>
+            <p className="mt-2 text-blue-700">
+              {accountId 
+                ? `No payments found for account ${accountId} on ${selectedDate}.` 
+                : `No vendor payments found for ${selectedDate}.`}
+            </p>
+            <p className="mt-2 text-sm text-blue-600">
+              Try selecting a different date or checking account details.
             </p>
           </div>
-        ) : (
-          <div className="space-y-10">
-            {/* Summary Section */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-market-olive mb-4">Daily Summary - {format(new Date(selectedDate), 'MMMM d, yyyy')}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-500">Total Sales Volume</p>
-                  <p className="text-2xl font-bold text-market-green">
-                    {formatCurrency(paymentData.reduce((sum, vendor) => sum + vendor.summary.total_volume, 0))}
-                  </p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-500">Total Transactions</p>
-                  <p className="text-2xl font-bold text-market-green">
-                    {paymentData.reduce((sum, vendor) => sum + vendor.summary.transaction_count, 0)}
-                  </p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-500">Active Vendors</p>
-                  <p className="text-2xl font-bold text-market-green">
-                    {paymentData.filter(vendor => vendor.summary.transaction_count > 0).length}
-                  </p>
-                </div>
-              </div>
+        )}
+
+        {/* Payment Data Cards */}
+        {!loading && paymentData.length > 0 && (
+          <>
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-market-olive mb-2">
+                Payment Summary - {new Date(selectedDate).toLocaleDateString()}
+              </h2>
+              <p className="text-sm text-gray-500">
+                Showing {paymentData.length} vendor{paymentData.length !== 1 ? 's' : ''}
+              </p>
             </div>
 
-            {/* Vendor Specific Sections */}
-            {paymentData.map((vendor) => (
-              <div key={vendor.vendor.id} className="bg-white shadow rounded-lg overflow-hidden">
-                <div className="p-6 border-b">
-                  <h2 className="text-xl font-semibold text-market-olive">
-                    {vendor.vendor.business_name} 
-                    <span className="ml-2 text-sm text-gray-500">({vendor.vendor.status})</span>
-                  </h2>
-                  <p className="text-sm text-gray-500">{vendor.vendor.product_type}</p>
-                  <p className="text-xs text-gray-400 mt-1">Account ID: {vendor.vendor.stripe_account_id}</p>
-                </div>
+            <div className="grid grid-cols-1 gap-8 mb-8">
+              {paymentData.map((vendor, index) => (
+                <div key={vendor.vendor.id || index} className="bg-white shadow rounded-lg overflow-hidden">
+                  <div className="border-b border-gray-200 px-6 py-4">
+                    <h3 className="text-lg font-medium text-gray-900">
+                      {vendor.vendor.business_name}
+                      {vendor.error && (
+                        <span className="ml-2 text-sm text-red-600">
+                          (Error: {vendor.error})
+                        </span>
+                      )}
+                    </h3>
+                    <div className="mt-1 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-gray-500">
+                      <div>Product: {vendor.vendor.product_type}</div>
+                      <div>Account: {vendor.vendor.stripe_account_id}</div>
+                      <div>Status: {vendor.vendor.status}</div>
+                    </div>
+                  </div>
 
-                {vendor.error ? (
-                  <div className="p-6 bg-red-50 text-red-700">
-                    <p>Error loading data: {vendor.error}</p>
-                  </div>
-                ) : vendor.summary.transaction_count === 0 ? (
-                  <div className="p-6 text-center">
-                    <p className="text-gray-500">No transactions on this date</p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Vendor Summary Cards */}
-                    <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <p className="text-xs text-gray-500">Sales Volume</p>
-                        <p className="text-xl font-bold text-market-green">{formatCurrency(vendor.summary.total_volume)}</p>
+                  <div className="px-6 py-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                      <div className="bg-gray-50 p-4 rounded">
+                        <h4 className="text-xs font-medium text-gray-500 uppercase">Total Sales</h4>
+                        <p className="mt-1 text-2xl font-semibold text-gray-900">{formatCurrency(vendor.summary.total_volume)}</p>
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <p className="text-xs text-gray-500">Transactions</p>
-                        <p className="text-xl font-bold text-market-green">{vendor.summary.transaction_count}</p>
+                      <div className="bg-gray-50 p-4 rounded">
+                        <h4 className="text-xs font-medium text-gray-500 uppercase">Transactions</h4>
+                        <p className="mt-1 text-2xl font-semibold text-gray-900">{vendor.summary.transaction_count}</p>
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <p className="text-xs text-gray-500">Avg. Transaction</p>
-                        <p className="text-xl font-bold text-market-green">{formatCurrency(vendor.summary.average_transaction_size)}</p>
+                      <div className="bg-gray-50 p-4 rounded">
+                        <h4 className="text-xs font-medium text-gray-500 uppercase">Avg. Transaction</h4>
+                        <p className="mt-1 text-2xl font-semibold text-gray-900">
+                          {formatCurrency(vendor.summary.average_transaction_size)}
+                        </p>
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <p className="text-xs text-gray-500">Available Balance</p>
-                        <p className="text-xl font-bold text-market-green">{formatCurrency(vendor.summary.available_balance)}</p>
+                      <div className="bg-gray-50 p-4 rounded">
+                        <h4 className="text-xs font-medium text-gray-500 uppercase">Available Balance</h4>
+                        <p className="mt-1 text-2xl font-semibold text-gray-900">
+                          {formatCurrency(vendor.summary.available_balance)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Pending: {formatCurrency(vendor.summary.pending_balance)}
+                        </p>
                       </div>
                     </div>
 
-                    {/* Activity Chart */}
-                    <div className="p-6 border-t">
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Hourly Activity</h3>
-                      <div className="h-80">
+                    {/* Hourly Transaction Chart */}
+                    <div className="mb-6">
+                      <h4 className="text-sm font-medium text-gray-700 mb-4">Hourly Sales Volume</h4>
+                      <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart
-                            data={vendor.hourly_data.filter(hour => hour.count > 0)}
-                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                            data={vendor.hourly_data}
+                            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                           >
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis 
-                              dataKey="hour" 
-                              tickFormatter={formatHour}
-                              label={{ value: 'Hour of Day', position: 'insideBottom', offset: -5 }}
-                            />
-                            <YAxis yAxisId="left" orientation="left" stroke="#71725E" label={{ value: 'Transaction Count', angle: -90, position: 'insideLeft' }} />
-                            <YAxis yAxisId="right" orientation="right" stroke="#4A8233" label={{ value: 'Sales Volume ($)', angle: 90, position: 'insideRight' }} />
+                            <XAxis dataKey="hour" tickFormatter={formatHour} />
+                            <YAxis tickFormatter={(value) => `$${Math.round(value)}`} />
                             <Tooltip 
                               formatter={(value: ValueType, name: NameType) => {
-                                if (name === 'Volume') return formatCurrency(value as number);
-                                return value;
+                                if (name === 'volume') return [formatCurrency(value as number), 'Sales Volume'];
+                                if (name === 'count') return [value, 'Transaction Count'];
+                                return [value, name];
                               }}
-                              labelFormatter={(hour: string | number) => `Hour: ${formatHour(Number(hour))}`}
+                              labelFormatter={(label) => `Hour: ${formatHour(label as number)}`}
                             />
                             <Legend />
-                            <Bar yAxisId="left" dataKey="count" name="Transactions" fill="#71725E" />
-                            <Bar yAxisId="right" dataKey="volume" name="Volume" fill="#4A8233" />
+                            <Bar dataKey="volume" name="Sales Volume" fill="#82ca9d" />
+                            <Bar dataKey="count" name="Transactions" fill="#8884d8" />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
                     </div>
 
-                    {/* Recent Transactions */}
+                    {/* Recent Transactions Table */}
                     {vendor.recent_transactions.length > 0 && (
-                      <div className="p-6 border-t">
-                        <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Transactions</h3>
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 mb-4">Recent Transactions</h4>
                         <div className="overflow-x-auto">
                           <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                               <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment ID</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Method</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
                               </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                               {vendor.recent_transactions.map((transaction) => (
                                 <tr key={transaction.id}>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {format(new Date(transaction.created), 'h:mm a')}
-                                  </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    {formatCurrency(transaction.amount)}
+                                    {transaction.receipt_url ? (
+                                      <a href={transaction.receipt_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                        {transaction.id.substring(0, 10)}...
+                                      </a>
+                                    ) : (
+                                      <span>{transaction.id.substring(0, 10)}...</span>
+                                    )}
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {transaction.payment_method}
+                                    {formatCurrency(transaction.amount)}
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -431,29 +508,16 @@ export default function VendorPaymentsPage() {
                                             ? 'bg-blue-100 text-blue-800'
                                             : transaction.status === 'requires_payment_method' || transaction.status === 'requires_confirmation'
                                               ? 'bg-purple-100 text-purple-800'
-                                              : transaction.status === 'canceled' || transaction.status === 'failed'
-                                                ? 'bg-red-100 text-red-800'
-                                                : 'bg-gray-100 text-gray-800'
+                                              : 'bg-red-100 text-red-800'
                                     }`}>
                                       {transaction.status}
                                     </span>
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <span className="font-mono text-xs">{transaction.id}</span>
+                                    {new Date(transaction.created).toLocaleString()}
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {transaction.receipt_url ? (
-                                      <a
-                                        href={transaction.receipt_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-market-green hover:text-market-green/80"
-                                      >
-                                        View Receipt
-                                      </a>
-                                    ) : (
-                                      "N/A"
-                                    )}
+                                    {transaction.payment_method}
                                   </td>
                                 </tr>
                               ))}
@@ -462,11 +526,31 @@ export default function VendorPaymentsPage() {
                         </div>
                       </div>
                     )}
-                  </>
-                )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {/* Load More Button */}
+            {hasMorePages && (
+              <div className="text-center mb-8">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-market-olive hover:bg-market-olive/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-market-olive"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <span className="mr-2 animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></span>
+                      Loading more...
+                    </>
+                  ) : (
+                    'Load More Vendors'
+                  )}
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>
