@@ -155,17 +155,53 @@ export default function VendorPaymentsPage() {
             'or try again later when the system is less busy.'
           );
         }
-        const errorText = await response.text();
-        throw new Error(errorText || `Server error (${response.status})`);
+        
+        // Improved error handling for non-JSON responses
+        const contentType = response.headers.get('content-type');
+        try {
+          // If it's JSON, parse it normally
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Server error (${response.status})`);
+          } else {
+            // If not JSON, get as text and provide better error
+            const errorText = await response.text();
+            console.error('Non-JSON error response:', {
+              status: response.status,
+              contentType,
+              responseText: errorText.substring(0, 500) // Log first 500 chars
+            });
+            throw new Error(`API Error (${response.status}): The server returned an invalid response format. Please try again later.`);
+          }
+        } catch (parseError) {
+          // Handle JSON parsing errors specifically
+          if (parseError instanceof SyntaxError) {
+            console.error('JSON parsing error:', parseError);
+            throw new Error(`Invalid response format from server. Please try again later or contact support.`);
+          }
+          throw parseError; // Re-throw if it's not a syntax error
+        }
       }
       
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         const textResponse = await response.text();
-        throw new Error(`Received non-JSON response: ${textResponse.substring(0, 100)}...`);
+        console.error('Expected JSON but got:', {
+          contentType,
+          responsePreview: textResponse.substring(0, 500) // Log first 500 chars
+        });
+        throw new Error(`Received non-JSON response. The server may be experiencing issues. Please try again later.`);
       }
       
-      const data: ApiResponse = await response.json();
+      let data: ApiResponse;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('Error parsing JSON response:', jsonError);
+        const textContent = await response.text();
+        console.error('Response content:', textContent.substring(0, 500));
+        throw new Error('Could not parse server response. Please try again later.');
+      }
       
       if (!data.success) {
         throw new Error(data.error || 'Error in API response');

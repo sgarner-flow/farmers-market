@@ -253,7 +253,18 @@ export async function GET(request: Request) {
               console.log(`Found ${paymentIntents.data.length} payment intents for ${businessName}`);
             } catch (paymentError) {
               console.error(`Error fetching payment intents for ${account.id}:`, paymentError);
+              // Initialize with empty data array to prevent null reference errors
               paymentIntents = { data: [] };
+              
+              // Log detailed error information for debugging
+              if (paymentError instanceof Error) {
+                console.error('Payment intent error details:', {
+                  name: paymentError.name,
+                  message: paymentError.message,
+                  stack: paymentError.stack,
+                  account: account.id
+                });
+              }
             }
             
             // If no payment intents found through the standard method, try a different approach
@@ -479,8 +490,25 @@ export async function GET(request: Request) {
     
   } catch (error) {
     console.error('Unexpected error in getVendorPayments:', error);
+    
+    // More detailed error handling to prevent non-JSON responses
+    let errorMessage = 'An unexpected error occurred. Please try again.';
+    
+    // Check what type of error we're dealing with and format appropriately
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+    } else {
+      console.error('Unknown error type:', typeof error);
+    }
+    
+    // Always return a proper JSON response with status 500
     return NextResponse.json(
-      { error: 'An unexpected error occurred. Please try again.' },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }
