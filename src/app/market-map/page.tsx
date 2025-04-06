@@ -124,8 +124,10 @@ export default function MarketMapPage() {
   return (
     <main className="min-h-screen bg-[#F3EDDF] py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Title */}
-        <h1 className="text-4xl text-market-brown mb-8">VENDOR MAP</h1>
+        {/* Title only - removed the back button */}
+        <div className="flex justify-center mb-8">
+          <h1 className="text-4xl text-market-brown">VENDOR MAP</h1>
+        </div>
         
         {/* Google Maps Location */}
         <div className="bg-white rounded-lg shadow-md p-5 mb-8">

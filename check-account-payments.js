@@ -2,21 +2,45 @@ require('dotenv').config({ path: '.env.local' });
 const Stripe = require('stripe');
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
-const ACCOUNT_ID = 'acct_1R9VFgFJBDvSq37M'; // Sara Garner
+// Remove hardcoded account ID since we'll check all accounts
+// const ACCOUNT_ID = 'acct_1RAtq5FMOvZgidQI'; 
 const TODAY = new Date();
 // Get date range from 2 days ago until today to catch recent transactions
 const START_DATE = Math.floor((TODAY.getTime() - (48 * 60 * 60 * 1000)) / 1000);
 
-async function checkAccountPayments() {
-  console.log(`🔍 Checking payments for account: ${ACCOUNT_ID}`);
+async function checkAllConnectedAccounts() {
+  console.log("🔍 Retrieving all connected accounts...");
   
   try {
-    // 1. First check the account to make sure it exists
-    const account = await stripe.accounts.retrieve(ACCOUNT_ID);
-    console.log(`✅ Account exists: ${account.business_profile?.name || 'Unnamed'}`);
+    // First get all connected accounts
+    const accounts = await stripe.accounts.list({
+      limit: 100,
+    });
     
+    console.log(`✅ Found ${accounts.data.length} connected accounts\n`);
+    
+    // Check each account
+    for (const account of accounts.data) {
+      console.log(`\n======= ACCOUNT: ${account.id} =======`);
+      console.log(`Business: ${account.business_profile?.name || 'Unnamed'}`);
+      console.log(`Email: ${account.email || 'No email'}`);
+      console.log(`Status: ${account.charges_enabled ? 'Active' : 'Inactive'} for charges`);
+      console.log(`Created: ${new Date(account.created * 1000).toLocaleDateString()}\n`);
+      
+      await checkAccountPayments(account.id);
+      
+      console.log("\n======= END ACCOUNT =======\n");
+    }
+    
+  } catch (err) {
+    console.error(`❌ Error listing accounts: ${err.message}`);
+  }
+}
+
+async function checkAccountPayments(accountId) {
+  try {
     // 2. Check payment intents created for this account
-    console.log("\n🔄 Checking payment intents transferred to this account...");
+    console.log("🔄 Checking payment intents transferred to this account...");
     
     const paymentIntents = await stripe.paymentIntents.list({
       limit: 100,
@@ -25,7 +49,7 @@ async function checkAccountPayments() {
     
     // Filter for payment intents with the transfer_data.destination matching our account
     const accountPayments = paymentIntents.data.filter(
-      pi => pi.transfer_data && pi.transfer_data.destination === ACCOUNT_ID
+      pi => pi.transfer_data && pi.transfer_data.destination === accountId
     );
     
     if (accountPayments.length === 0) {
@@ -41,7 +65,7 @@ async function checkAccountPayments() {
     console.log("\n💸 Checking transfers to this account...");
     
     const transfers = await stripe.transfers.list({
-      destination: ACCOUNT_ID,
+      destination: accountId,
       limit: 100,
       created: { gte: START_DATE }
     });
@@ -63,7 +87,7 @@ async function checkAccountPayments() {
         limit: 100,
         created: { gte: START_DATE }
       }, {
-        stripeAccount: ACCOUNT_ID  // This is key - we're using the connected account's API access
+        stripeAccount: accountId  // This is key - we're using the connected account's API access
       });
       
       if (charges.data.length === 0) {
@@ -83,7 +107,7 @@ async function checkAccountPayments() {
     
     try {
       const balance = await stripe.balance.retrieve({
-        stripeAccount: ACCOUNT_ID
+        stripeAccount: accountId
       });
       
       console.log("Available balance:");
@@ -105,5 +129,5 @@ async function checkAccountPayments() {
   }
 }
 
-// Run the check
-checkAccountPayments().catch(console.error); 
+// Run the check for all accounts
+checkAllConnectedAccounts().catch(console.error); 

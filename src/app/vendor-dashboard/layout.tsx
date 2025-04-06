@@ -14,22 +14,16 @@ export default function VendorDashboardLayout({
   return (
     <div className="bg-gray-50 min-h-screen">
       <header className="bg-[#F3EDDF] text-gray-800 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <Link href="/" className="text-xl font-bold hover:text-gray-600">Flow Farmers Market</Link>
-              <span className="ml-4 text-sm bg-[#E6D5BC] px-2 py-1 rounded">Vendor Portal</span>
+            <div className="flex items-center flex-shrink-0 mr-4">
+              <Link href="/" className="text-xl font-bold hover:text-gray-600 whitespace-nowrap">Flow Farmers Market</Link>
+              <span className="ml-4 text-sm bg-[#E6D5BC] px-2 py-1 rounded whitespace-nowrap">Vendor Portal</span>
             </div>
-            <nav className="flex space-x-4">
-              <Link 
-                href="/vendor-dashboard" 
-                className="px-3 py-2 rounded-md text-sm font-medium hover:bg-[#E6D5BC]"
-              >
-                Dashboard
-              </Link>
+            <nav className="flex-shrink-0 ml-4">
               <Link 
                 href="/vendor-dashboard/payments" 
-                className="px-3 py-2 rounded-md text-sm font-medium hover:bg-[#E6D5BC]"
+                className="px-4 py-2 rounded-md text-sm font-medium bg-[#E6D5BC] hover:bg-[#D8C5A9] transition-colors whitespace-nowrap"
               >
                 Payments
               </Link>

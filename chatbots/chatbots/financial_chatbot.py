@@ -446,6 +446,34 @@ When interpreting date ranges, or asked about historical data, use the provided 
         """Close database connection."""
         if self.db_conn:
             self.db_conn.close()
+            
+    def get_response(self, query: str) -> str:
+        """
+        Get a single response for the API.
+        
+        Args:
+            query (str): The user's question or prompt
+            
+        Returns:
+            str: The AI's response to the query
+        """
+        try:
+            if not query or query.strip() == '':
+                return "Please provide a question about vendor financial data."
+                
+            # Search for relevant content
+            results = self.search(query)
+            
+            if not results:
+                return "I couldn't find relevant information to answer your question. Please try a different question about vendor sales, performance, or market trends."
+            
+            # Generate response
+            return self.generate_response(query, results)
+            
+        except psycopg2.Error as e:
+            return f"I encountered a database error while trying to answer your question: {str(e)}"
+        except Exception as e:
+            return f"I encountered an error while analyzing the information: {str(e)}"
 
 def get_chat_response(query: str) -> str:
     """

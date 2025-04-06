@@ -1,9 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import path from 'path';
-
-const execAsync = promisify(exec);
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,55 +10,35 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Path to the Python script
-    const scriptPath = path.join(process.cwd(), 'chatbots/chatbots/financial_chatbot.py');
     
-    // Escape the query to prevent command injection
-    const escapedQuery = query.replace(/"/g, '\\"');
+    // Get the chatbot API URL from environment variable
+    const apiUrl = process.env.NEXT_PUBLIC_CHATBOT_API_URL || 'http://localhost:5001';
     
-    // Run the Python script with the query as input
-    // We need to create a temporary script that will import the financial_chatbot module
-    // and call get_chat_response with our query
-    const tempScriptPath = path.join(process.cwd(), 'chatbots/temp_query.py');
+    // Forward the request to the Flask API
+    const response = await fetch(`${apiUrl}/api/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message: query }),
+    });
     
-    // Create the temporary script content
-    const scriptContent = `
-import sys
-sys.path.append('${path.join(process.cwd(), 'chatbots')}')
-from chatbots.financial_chatbot import get_chat_response
-
-# Get the query from command line arguments
-query = """${escapedQuery}"""
-
-# Call the chatbot function and print the response
-response = get_chat_response(query)
-print(response)
-    `;
-    
-    // Write the temp script to a file
-    const fs = require('fs');
-    fs.writeFileSync(tempScriptPath, scriptContent);
-    
-    // Execute the temporary Python script
-    const { stdout, stderr } = await execAsync(`python ${tempScriptPath}`);
-    
-    // Clean up the temporary script
-    fs.unlinkSync(tempScriptPath);
-    
-    if (stderr) {
-      console.error('Error from Python script:', stderr);
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Chatbot API error:', errorData);
       return NextResponse.json(
-        { error: 'Error processing query' },
-        { status: 500 }
+        { error: 'Error from chatbot service' },
+        { status: response.status }
       );
     }
     
-    return NextResponse.json({ response: stdout.trim() });
+    const data = await response.json();
+    
+    return NextResponse.json({ response: data.response });
   } catch (error) {
     console.error('API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: `Internal server error: ${error instanceof Error ? error.message : String(error)}` },
       { status: 500 }
     );
   }

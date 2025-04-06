@@ -53,6 +53,14 @@ export default function ChatbotSidebar() {
     }
   }, [messages]);
 
+  // Prevent page scroll when input gets focus
+  const handleInputFocus = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+    // Prevent any default behavior that might cause page scrolling
+    e.preventDefault();
+    // Don't let the focus event bubble up to parent elements
+    e.stopPropagation();
+  };
+
   // Focus input on load
   useEffect(() => {
     if (inputRef.current) {
@@ -118,7 +126,7 @@ export default function ChatbotSidebar() {
   // Handle Enter key press
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
+      e.preventDefault(); // Prevent default to avoid form submission
       handleSendMessage();
     }
   };
@@ -197,7 +205,7 @@ export default function ChatbotSidebar() {
             </div>
             
             {/* Footer with Input */}
-            <div className="sticky bottom-0 bg-white border-t border-gray-100 pt-2">
+            <div className="sticky bottom-0 bg-white border-t border-gray-100 pt-2" onClick={(e) => e.stopPropagation()}>
               {/* Actions */}
               <div className="px-2 flex justify-end">
                 <button 
@@ -223,6 +231,7 @@ export default function ChatbotSidebar() {
                         e.target.style.height = 'auto';
                         e.target.style.height = `${Math.min(e.target.scrollHeight, 150)}px`;
                       }}
+                      onFocus={handleInputFocus}
                       onKeyDown={handleKeyDown}
                       disabled={isLoading}
                       rows={1}

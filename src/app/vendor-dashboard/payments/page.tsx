@@ -148,7 +148,11 @@ export default function VendorPaymentsPage() {
     setError(null);
     
     try {
-      let url = `/api/getVendorPayments?date=${date}&page=${page}&limit=${pageSize}`;
+      // Ensure consistent date format (YYYY-MM-DD)
+      const formattedDate = new Date(date).toISOString().split('T')[0];
+      console.log(`Fetching data for formatted date: ${formattedDate} (original: ${date})`);
+      
+      let url = `/api/getVendorPayments?date=${formattedDate}&page=${page}&limit=${pageSize}`;
       if (account) url += `&account=${account}`;
       if (payment) url += `&payment=${payment}`;
       if (page > 1 && lastAccountId) url += `&last_account_id=${lastAccountId}`;
@@ -477,7 +481,7 @@ export default function VendorPaymentsPage() {
                     </div>
                     
                     {/* Render vendor data only if they have transactions */}
-                    {vendor.summary.transaction_count > 0 && (
+                    {vendor.summary.transaction_count > 0 ? (
                       <>
                         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
                           <div className="bg-gray-50 p-4 rounded-lg">
@@ -490,13 +494,13 @@ export default function VendorPaymentsPage() {
                           </div>
                           <div className="bg-gray-50 p-4 rounded-lg">
                             <p className="text-sm text-gray-500">Avg. Transaction</p>
-                            <p className="text-2xl font-bold text-gray-900">{formatCurrency(vendor.summary.average_transaction_size)}</p>
+                            <p className="text-2xl font-bold text-gray-900">{formatCurrency(vendor.summary.average_transaction_size || 0)}</p>
                           </div>
                           <div className="bg-gray-50 p-4 rounded-lg">
                             <p className="text-sm text-gray-500">Available Balance</p>
-                            <p className="text-2xl font-bold text-gray-900">{formatCurrency(vendor.summary.available_balance)}</p>
+                            <p className="text-2xl font-bold text-gray-900">{formatCurrency(vendor.summary.available_balance || 0)}</p>
                             <p className="text-xs text-gray-500 mt-1">
-                              Pending: {formatCurrency(vendor.summary.pending_balance)}
+                              Pending: {formatCurrency(vendor.summary.pending_balance || 0)}
                             </p>
                           </div>
                         </div>
@@ -564,10 +568,16 @@ export default function VendorPaymentsPage() {
                                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                         {transaction.receipt_url ? (
                                           <a href={transaction.receipt_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                                            {transaction.id.substring(0, 10)}...
+                                            {typeof transaction.id === 'string' 
+                                              ? transaction.id.substring(0, 10) + '...'
+                                              : transaction.id ? String(transaction.id).substring(0, 10) + '...' : 'N/A'}
                                           </a>
                                         ) : (
-                                          <span>{transaction.id.substring(0, 10)}...</span>
+                                          <span>
+                                            {typeof transaction.id === 'string' 
+                                              ? transaction.id.substring(0, 10) + '...'
+                                              : transaction.id ? String(transaction.id).substring(0, 10) + '...' : 'N/A'}
+                                          </span>
                                         )}
                                       </td>
                                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -602,10 +612,8 @@ export default function VendorPaymentsPage() {
                           </div>
                         )}
                       </>
-                    )}
-                    
-                    {/* Message for vendors with no transactions */}
-                    {vendor.summary.transaction_count === 0 && (
+                    ) : (
+                      // Message for vendors with no transactions
                       <div className="text-center py-4 text-gray-500">
                         No transactions recorded for this vendor on {format(new Date(selectedDate), 'M/d/yyyy')}.
                       </div>
