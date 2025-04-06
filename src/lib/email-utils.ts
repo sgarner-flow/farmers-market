@@ -32,13 +32,13 @@ export function getEmailImageUrl(imagePath: string): string {
   }
   if (imageName.includes('flow-footer') || imageName === 'flow-footer.svg') {
     // Return an absolute URL for the SVG file
-    return `${baseUrl}/flow-footer.svg`;
+    return `https://rbreohiwrvcpfznnpumh.supabase.co/storage/v1/object/public/images//Oneness_-_light_1.png`;
   }
   if (imageName.includes('flow-logo') || imageName === 'flow-logo.svg') {
-    return `${baseUrl}/flow-logo.svg`;
+    return `https://rbreohiwrvcpfznnpumh.supabase.co/storage/v1/object/public/images//Flow-Header.png`;
   }
   if (imageName.includes('dividier') || imageName.includes('divider-padded')) {
-    return `${baseUrl}/Dividier-Padded.png`;
+    return `https://rbreohiwrvcpfznnpumh.supabase.co/storage/v1/object/public/images//Dividier-Padded.png`;
   }
   
   // Default handling for other images
