@@ -18,7 +18,26 @@ const getImageBaseUrl = (): string => {
  */
 export function getEmailImageUrl(imagePath: string): string {
   const baseUrl = getImageBaseUrl();
-  // Remove leading 'public/' if present
+  
+  // Special handling for common email images to ensure consistent URLs
+  // rather than relying on filesystem access
+  const imageName = imagePath.toLowerCase().replace(/^public\//, '');
+  
+  // Handle specific image files with hardcoded paths
+  if (imageName.includes('flow-header.png') || imageName === 'flow-header.png') {
+    return `${baseUrl}/Flow-Header.png`;
+  }
+  if (imageName.includes('flow-divider') || imageName === 'flow-divider.png') {
+    return `${baseUrl}/flow-divider.png`;
+  }
+  if (imageName.includes('flow-footer') || imageName === 'flow-footer.svg') {
+    return `${baseUrl}/flow-footer.svg`;
+  }
+  if (imageName.includes('flow-logo') || imageName === 'flow-logo.svg') {
+    return `${baseUrl}/flow-logo.svg`;
+  }
+  
+  // Default handling for other images
   const cleanPath = imagePath.replace(/^public\//, '');
   return `${baseUrl}/${cleanPath}`;
 }

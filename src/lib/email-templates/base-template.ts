@@ -10,10 +10,10 @@ export function createBaseEmailTemplate(options: {
   mainContent: string;
   footerContent?: string;
 }) {
-  // Get image URLs for consistent use across templates
-  const logoUrl = getEmailImageUrl('flow-logo.svg');
-  const footerLogoUrl = getEmailImageUrl('flow-footer.svg');
-  const headerImageUrl = getEmailImageUrl('Flow-Header.png');
+  // Use hardcoded URLs for all images to avoid filesystem access issues
+  const logoUrl = 'https://flowfarmersmarket.vercel.app/flow-logo.svg';
+  const footerLogoUrl = 'https://flowfarmersmarket.vercel.app/flow-footer.svg';
+  const headerImageUrl = 'https://flowfarmersmarket.vercel.app/Flow-Header.png';
   
   return `
   <!DOCTYPE html>
@@ -42,6 +42,13 @@ export function createBaseEmailTemplate(options: {
                 <div style="max-width: 250px; margin: 0 auto;">
                   <img src="${logoUrl}" alt="Flow Farmers Market" style="display: block; width: 100%; max-width: 250px; height: auto;">
                 </div>
+              </td>
+            </tr>
+            
+            <!-- Header banner image -->
+            <tr>
+              <td align="center" style="padding-bottom: 20px;">
+                <img src="${headerImageUrl}" alt="Flow Header" style="width:100%; max-width:600px;" />
               </td>
             </tr>
             
