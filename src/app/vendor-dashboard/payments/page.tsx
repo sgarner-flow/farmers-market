@@ -16,6 +16,8 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
+import ChatbotSidebar from '@/components/ChatbotSidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 // Types for the API response
 type VendorPaymentData = {
@@ -312,286 +314,248 @@ export default function VendorPaymentsPage() {
   }, [selectedDate]);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Simplified header with clean button layout */}
-        <div className="bg-white px-6 py-5 rounded-lg mb-8">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-market-olive">VENDOR PAYMENTS</h1>
-              <p className="mt-1 text-sm text-gray-500">
-                Track payment activity for all vendors
-              </p>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-4 mt-4 lg:mt-0">
-              <div>
-                <div className="text-sm font-medium text-gray-700 mb-1">
-                  Select Date
-                </div>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-market-green focus:border-market-green sm:text-sm"
-                  max={format(new Date(), 'yyyy-MM-dd')}
-                />
-              </div>
-            </div>
+    <div className="relative w-full min-h-screen bg-gray-50">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8">
+        <div className="md:col-span-2 px-4 sm:px-6 lg:px-8 pb-12">
+          <div className="bg-[#F3EDDF] rounded-lg p-6 mb-8 shadow-sm">
+            <h1 className="text-2xl font-bold tracking-tight text-gray-800">Vendor Payments Dashboard</h1>
           </div>
           
-          <div className="flex flex-wrap items-center gap-4">
-            <button 
-              onClick={() => {
-                setAccountId('');
-                fetchPaymentData(selectedDate, 1);
-              }}
-              className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
-            >
-              View All Accounts
-            </button>
-            
-            <button
-              onClick={() => setShowLookupForm(!showLookupForm)}
-              className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              Find Specific Vendor/Payment
-            </button>
-          </div>
-        </div>
-
-        {/* Advanced Lookup Form */}
-        {showLookupForm && (
-          <div className="bg-white shadow rounded-lg p-6 mb-8">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Look Up Specific Payment</h2>
-            <form onSubmit={handleLookup} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white shadow rounded-lg p-4 mb-6">
+            {/* Date selection UI */}
+            <div className="grid md:grid-cols-3 gap-4 items-center">
               <div>
-                <label htmlFor="account-id" className="block text-sm font-medium text-gray-700 mb-1">
-                  Stripe Account ID
+                <label htmlFor="date" className="block text-sm font-medium text-gray-700">
+                  Select Date
                 </label>
                 <input
-                  id="account-id"
-                  type="text"
-                  value={accountId}
-                  onChange={(e) => setAccountId(e.target.value)}
-                  placeholder="acct_123456789"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-market-green focus:border-market-green sm:text-sm"
+                  type="date"
+                  id="date"
+                  name="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#E6D5BC] focus:ring-[#E6D5BC] sm:text-sm"
                 />
               </div>
+              
               <div>
-                <label htmlFor="payment-id" className="block text-sm font-medium text-gray-700 mb-1">
-                  Payment Intent ID (optional)
-                </label>
-                <input
-                  id="payment-id"
-                  type="text"
-                  value={paymentId}
-                  onChange={(e) => setPaymentId(e.target.value)}
-                  placeholder="pi_123456789"
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-market-green focus:border-market-green sm:text-sm"
-                />
-              </div>
-              <div className="flex items-end">
                 <button
-                  type="submit"
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-market-olive hover:bg-market-olive/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-market-olive"
+                  onClick={() => fetchPaymentData(selectedDate, 1)}
                   disabled={loading}
+                  className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-800 bg-[#F3EDDF] hover:bg-[#E6D5BC] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#E6D5BC]"
                 >
-                  {loading ? 'Searching...' : 'Look Up'}
+                  {loading ? (
+                    <>
+                      <span className="mr-2 animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-gray-800"></span>
+                      Loading...
+                    </>
+                  ) : (
+                    'Load Data'
+                  )}
                 </button>
               </div>
-            </form>
-          </div>
-        )}
+              
+              <div>
+                <button
+                  onClick={() => setShowLookupForm(!showLookupForm)}
+                  className="w-full inline-flex justify-center items-center px-4 py-2 border border-[#E6D5BC] text-sm font-medium rounded-md text-gray-800 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#E6D5BC]"
+                >
+                  {showLookupForm ? 'Hide Lookup' : 'Look Up Specific Transaction'}
+                </button>
+              </div>
+            </div>
 
-        {/* Loading Indicator */}
-        {loading && (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-market-green mx-auto"></div>
-            <p className="mt-4 text-market-olive">Fetching payment data...</p>
-            <p className="mt-2 text-sm text-gray-500">This may take a moment if there are many transactions.</p>
+            {/* Lookup form */}
+            {showLookupForm && (
+              <div className="mt-4 p-4 border border-gray-200 rounded-lg">
+                <h3 className="text-lg font-medium text-gray-900 mb-3">Look Up Specific Transaction</h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <label htmlFor="accountId" className="block text-sm font-medium text-gray-700">
+                      Stripe Account ID (optional)
+                    </label>
+                    <input
+                      type="text"
+                      id="accountId"
+                      name="accountId"
+                      value={accountId}
+                      onChange={(e) => setAccountId(e.target.value)}
+                      placeholder="acct_1234..."
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#E6D5BC] focus:ring-[#E6D5BC] sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="paymentId" className="block text-sm font-medium text-gray-700">
+                      Payment ID (optional)
+                    </label>
+                    <input
+                      type="text"
+                      id="paymentId"
+                      name="paymentId"
+                      value={paymentId}
+                      onChange={(e) => setPaymentId(e.target.value)}
+                      placeholder="pi_1234..."
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#E6D5BC] focus:ring-[#E6D5BC] sm:text-sm"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      onClick={handleLookup}
+                      disabled={loading}
+                      className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-800 bg-[#F3EDDF] hover:bg-[#E6D5BC] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#E6D5BC]"
+                    >
+                      Look Up
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
 
-        {/* Error Message */}
-        {error && !loading && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
-            <h2 className="text-lg font-medium text-red-800 mb-2">Error</h2>
-            <p className="text-red-700">{error}</p>
-            <button 
-              onClick={() => fetchPaymentData(selectedDate, 1, accountId, paymentId)}
-              className="mt-4 px-4 py-2 bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors"
-            >
-              Try Again
-            </button>
-          </div>
-        )}
-
-        {/* Direct Payment Result */}
-        {directPaymentResult && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Direct Payment Found</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment ID</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created Date</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{directPaymentResult.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatCurrency(directPaymentResult.amount)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#E6D5BC]"></div>
+            </div>
+          ) : error ? (
+            <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+              <span className="block sm:inline">{error}</span>
+            </div>
+          ) : (
+            <>
+              {directPaymentResult && (
+                <div className="bg-white shadow rounded-lg p-4 mb-6">
+                  <h2 className="text-xl font-bold mb-4">Transaction Details</h2>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="border rounded-lg p-4">
+                      <p className="text-sm text-gray-500">Payment ID</p>
+                      <p className="text-lg font-medium">{directPaymentResult.id}</p>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <p className="text-sm text-gray-500">Amount</p>
+                      <p className="text-lg font-medium">{formatCurrency(directPaymentResult.amount)}</p>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <p className="text-sm text-gray-500">Status</p>
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         directPaymentResult.status === 'succeeded' 
                           ? 'bg-green-100 text-green-800' 
-                          : directPaymentResult.status === 'pending' 
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : directPaymentResult.status === 'processing'
-                              ? 'bg-blue-100 text-blue-800'
-                              : directPaymentResult.status === 'requires_payment_method' || directPaymentResult.status === 'requires_confirmation'
-                                ? 'bg-purple-100 text-purple-800'
-                                : 'bg-red-100 text-red-800'
+                          : 'bg-yellow-100 text-yellow-800'
                       }`}>
                         {directPaymentResult.status}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(directPaymentResult.created).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{directPaymentResult.account}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {!loading && vendorsToDisplay.length === 0 && !error && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
-            <h2 className="text-lg font-medium text-blue-800">No Payment Data Found</h2>
-            <p className="mt-2 text-blue-700">
-              {accountId 
-                ? `No payments found for account ${accountId} on ${selectedDate}.` 
-                : `No vendor payments found for ${selectedDate}.`}
-            </p>
-            <p className="mt-2 text-sm text-blue-600">
-              Try selecting a different date or checking account details.
-            </p>
-          </div>
-        )}
-
-        {/* Payment Data Cards */}
-        {!loading && vendorsToDisplay.length > 0 && (
-          <>
-            <div className="bg-white shadow-sm rounded-lg p-4 mb-6">
-              <h2 className="text-xl font-semibold text-market-olive">
-                Payment Summary - {format(new Date(selectedDate), 'M/d/yyyy')}
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Showing {vendorsToDisplay.length} vendor{vendorsToDisplay.length !== 1 ? 's' : ''}
-                {hasMorePages && ' (more available)'}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-8 mb-8">
-              {vendorsToDisplay.map((vendor, index) => (
-                <div key={`${vendor.vendor.id || ''}-${index}`} className="bg-white shadow rounded-lg overflow-hidden">
-                  <div className="border-b border-gray-200 px-6 py-4">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {vendor.vendor.business_name}
-                      {vendor.error && (
-                        <span className="ml-2 text-sm text-red-600">
-                          (Error: {vendor.error})
-                        </span>
-                      )}
-                    </h3>
-                    <div className="mt-1 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-gray-500">
-                      <div>Product: {vendor.vendor.product_type}</div>
-                      <div>Account: {vendor.vendor.stripe_account_id}</div>
-                      <div>Status: {vendor.vendor.status}</div>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <p className="text-sm text-gray-500">Date</p>
+                      <p className="text-lg font-medium">{new Date(directPaymentResult.created).toLocaleString()}</p>
                     </div>
                   </div>
+                </div>
+              )}
 
-                  <div className="px-6 py-4">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                      <div className="bg-gray-50 p-4 rounded">
-                        <h4 className="text-xs font-medium text-gray-500 uppercase">Total Sales</h4>
-                        <p className="mt-1 text-2xl font-semibold text-gray-900">{formatCurrency(vendor.summary.total_volume)}</p>
-                      </div>
-                      <div className="bg-gray-50 p-4 rounded">
-                        <h4 className="text-xs font-medium text-gray-500 uppercase">Transactions</h4>
-                        <p className="mt-1 text-2xl font-semibold text-gray-900">{vendor.summary.transaction_count}</p>
-                      </div>
-                      <div className="bg-gray-50 p-4 rounded">
-                        <h4 className="text-xs font-medium text-gray-500 uppercase">Avg. Transaction</h4>
-                        <p className="mt-1 text-2xl font-semibold text-gray-900">
-                          {formatCurrency(vendor.summary.average_transaction_size)}
-                        </p>
-                      </div>
-                      <div className="bg-gray-50 p-4 rounded">
-                        <h4 className="text-xs font-medium text-gray-500 uppercase">Available Balance</h4>
-                        <p className="mt-1 text-2xl font-semibold text-gray-900">
-                          {formatCurrency(vendor.summary.available_balance)}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Pending: {formatCurrency(vendor.summary.pending_balance)}
-                        </p>
+              {/* Vendor cards */}
+              <div className="space-y-6">
+                {vendorsToDisplay.map((vendor) => (
+                  <div key={vendor.vendor.id} className="bg-white shadow rounded-lg overflow-hidden">
+                    <div className="p-4 border-b">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <h2 className="text-xl font-bold text-gray-900">{vendor.vendor.business_name}</h2>
+                          <p className="text-sm text-gray-500">
+                            {vendor.vendor.product_type} | {vendor.vendor.email}
+                          </p>
+                        </div>
+                        <div className="mt-2 md:mt-0">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            vendor.vendor.status === 'active' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {vendor.vendor.status}
+                          </span>
+                        </div>
                       </div>
                     </div>
-
-                    {/* Only show charts and transaction details for vendors with transactions */}
+                    
+                    {/* Render vendor data only if they have transactions */}
                     {vendor.summary.transaction_count > 0 && (
                       <>
-                        {/* Hourly Transaction Chart */}
-                        <div className="mb-6">
-                          <h4 className="text-sm font-medium text-gray-700 mb-4">Hourly Sales Volume (9 AM - 9 PM)</h4>
+                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <p className="text-sm text-gray-500">Total Volume</p>
+                            <p className="text-2xl font-bold text-gray-900">{formatCurrency(vendor.summary.total_volume)}</p>
+                          </div>
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <p className="text-sm text-gray-500">Transactions</p>
+                            <p className="text-2xl font-bold text-gray-900">{vendor.summary.transaction_count}</p>
+                          </div>
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <p className="text-sm text-gray-500">Avg. Transaction</p>
+                            <p className="text-2xl font-bold text-gray-900">{formatCurrency(vendor.summary.average_transaction_size)}</p>
+                          </div>
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <p className="text-sm text-gray-500">Available Balance</p>
+                            <p className="text-2xl font-bold text-gray-900">{formatCurrency(vendor.summary.available_balance)}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Pending: {formatCurrency(vendor.summary.pending_balance)}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Transaction Charts */}
+                        <div className="p-4">
+                          <h3 className="text-lg font-medium text-gray-900 mb-4">Hourly Transaction Volume</h3>
                           <div className="h-64">
                             <ResponsiveContainer width="100%" height="100%">
-                              <LineChart
-                                data={vendor.hourly_data.filter(data => data.hour >= 9 && data.hour <= 21)} // Filter for 9 AM to 9 PM
+                              <BarChart
+                                data={vendor.hourly_data}
                                 margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                               >
                                 <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="hour" tickFormatter={formatHour} />
-                                <YAxis tickFormatter={(value: number) => `$${Math.round(value)}`} />
+                                <XAxis 
+                                  dataKey="hour" 
+                                  tickFormatter={formatHour}
+                                  tick={{ fontSize: 12 }}
+                                />
+                                <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                                <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
                                 <Tooltip 
-                                  formatter={(value: number | string, name: string) => {
-                                    if (name === 'volume') return [formatCurrency(value as number), 'Sales Volume'];
-                                    if (name === 'count') return [value, 'Transaction Count'];
+                                  formatter={(value: ValueType, name: NameType) => {
+                                    if (name === 'volume') return [formatCurrency(value as number), 'Volume'];
                                     return [value, name];
                                   }}
-                                  labelFormatter={(label: number) => `Hour: ${formatHour(label)}`}
+                                  labelFormatter={(label) => `Hour: ${formatHour(label as number)}`}
                                 />
                                 <Legend />
-                                <Line type="monotone" dataKey="volume" name="Sales Volume" stroke="#82ca9d" activeDot={{ r: 8 }} />
-                                <Line type="monotone" dataKey="count" name="Transactions" stroke="#8884d8" activeDot={{ r: 6 }} />
-                              </LineChart>
+                                <Bar dataKey="count" fill="#8884d8" name="Transaction Count" yAxisId="left" />
+                                <Bar dataKey="volume" fill="#82ca9d" name="Volume ($)" yAxisId="right" />
+                              </BarChart>
                             </ResponsiveContainer>
                           </div>
                         </div>
-
+                        
                         {/* Recent Transactions Table */}
-                        {vendor.recent_transactions.length > 0 && (
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-700 mb-4">Recent Transactions</h4>
+                        {vendor.recent_transactions && vendor.recent_transactions.length > 0 && (
+                          <div className="p-4 border-t">
+                            <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Transactions</h3>
                             <div className="overflow-x-auto">
                               <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-gray-50">
                                   <tr>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment ID</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Transaction ID
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Amount
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Status
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Date
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                      Method
+                                    </th>
                                   </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
@@ -647,54 +611,61 @@ export default function VendorPaymentsPage() {
                       </div>
                     )}
                   </div>
-                </div>
-              ))}
-            </div>
-            
-            {/* Load More Button */}
-            {hasMorePages && (
-              <div className="text-center mb-8">
-                <button
-                  onClick={handleLoadMore}
-                  disabled={isLoadingMore}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-market-olive hover:bg-market-olive/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-market-olive"
-                >
-                  {isLoadingMore ? (
-                    <>
-                      <span className="mr-2 animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></span>
-                      Loading more...
-                    </>
-                  ) : (
-                    'Load More Vendors'
-                  )}
-                </button>
+                ))}
               </div>
-            )}
-          </>
-        )}
+              
+              {/* Load More Button */}
+              {hasMorePages && (
+                <div className="text-center mb-8">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={isLoadingMore}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-800 bg-[#F3EDDF] hover:bg-[#E6D5BC] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#E6D5BC]"
+                  >
+                    {isLoadingMore ? (
+                      <>
+                        <span className="mr-2 animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-gray-800"></span>
+                        Loading more...
+                      </>
+                    ) : (
+                      'Load More Vendors'
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
 
-        {/* High-volume date warning component to the JSX */}
-        {showHighVolumeWarning && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 my-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-yellow-800">High Volume Date Warning</h3>
-                <div className="mt-2 text-sm text-yellow-700">
-                  <p>
-                    You've selected April 6th which contains a large volume of transactions. 
-                    Loading may take longer and some data might be trimmed for performance.
-                    For best results, use specific account lookups or try a different date.
-                  </p>
+          {/* High-volume date warning component to the JSX */}
+          {showHighVolumeWarning && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 my-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-yellow-800">High Volume Date Warning</h3>
+                  <div className="mt-2 text-sm text-yellow-700">
+                    <p>
+                      You've selected April 6th which contains a large volume of transactions. 
+                      Loading may take longer and some data might be trimmed for performance.
+                      For best results, use specific account lookups or try a different date.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
+          )}
+        </div>
+        
+        {/* Chatbot Column */}
+        <div className="md:col-span-1 bg-white">
+          <div className="h-full border-l border-gray-200">
+            <ChatbotSidebar />
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
