@@ -179,49 +179,52 @@ export default function MarketMapPage() {
         </div>
         
         {/* Map container with legend */}
-        <div className="bg-[#F1E9D6] p-8 rounded-lg relative mb-8">
-          {/* Vendor Map title with Last Updated date */}
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold text-market-brown">Vendor Map</h2>
-            <div className="text-market-olive flex items-center">
-              <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-              </svg>
-              <span>Last updated: {new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }).replace(/\//g, '/')}</span>
+        <div className="bg-[#F1E9D6] p-6 rounded-lg relative mb-8">
+          {/* Vendor Map header with integrated elements */}
+          <div className="flex flex-wrap items-center justify-between mb-4">
+            {/* Left side: Title and date */}
+            <div className="flex items-center space-x-4">
+              <h2 className="text-2xl font-semibold text-market-brown">Vendor Map</h2>
+              <div className="text-market-olive text-sm flex items-center">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <span>Last updated: {new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }).replace(/\//g, '/')}</span>
+              </div>
+            </div>
+
+            {/* Right side: Location selector */}
+            <div className="flex items-center space-x-3">
+              <label htmlFor="location-select" className="font-medium text-market-brown whitespace-nowrap">
+                Market Location:
+              </label>
+              <select
+                id="location-select"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="px-3 py-1 border border-market-green/30 rounded-lg focus:ring-2 focus:ring-market-green focus:border-market-green"
+              >
+                <option value="Miami">Miami</option>
+                <option value="FLL">FLL</option>
+                <option value="Brickell">Brickell</option>
+                <option value="Aventura">Aventura</option>
+                <option value="El Portal">El Portal</option>
+                <option value="Granada">Granada</option>
+              </select>
             </div>
           </div>
 
-          {/* Legend - repositioned to be below the title and last updated info */}
-          <div className="bg-white p-4 rounded-lg shadow-sm inline-block mb-6 float-right">
-            <h3 className="text-market-brown mb-2">Legend</h3>
-            <div className="flex items-center mb-2">
-              <div className="w-5 h-5 border-2 border-market-brown bg-white mr-2"></div>
-              <span>Vendor Tent</span>
+          {/* Legend - integrated into a horizontal layout */}
+          <div className="bg-white p-3 rounded-lg shadow-sm inline-flex items-center mb-6">
+            <span className="text-market-brown font-medium mr-4">Legend:</span>
+            <div className="flex items-center mr-4">
+              <div className="w-4 h-4 border-2 border-market-brown bg-white mr-2"></div>
+              <span className="text-sm">Vendor Tent</span>
             </div>
             <div className="flex items-center">
-              <div className="w-5 h-5 border-2 border-market-brown bg-[#F3EDDF] mr-2"></div>
-              <span>Facility/Service</span>
+              <div className="w-4 h-4 border-2 border-market-brown bg-[#F3EDDF] mr-2"></div>
+              <span className="text-sm">Facility/Service</span>
             </div>
-          </div>
-          
-          {/* Location selector - clear the float */}
-          <div className="mb-10 clear-both">
-            <label htmlFor="location-select" className="mr-2 font-medium text-market-brown">
-              Market Location:
-            </label>
-            <select
-              id="location-select"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="px-4 py-2 border border-market-green/30 rounded-lg focus:ring-2 focus:ring-market-green focus:border-market-green"
-            >
-              <option value="Miami">Miami</option>
-              <option value="FLL">FLL</option>
-              <option value="Brickell">Brickell</option>
-              <option value="Aventura">Aventura</option>
-              <option value="El Portal">El Portal</option>
-              <option value="Granada">Granada</option>
-            </select>
           </div>
           
           {isLoading ? (

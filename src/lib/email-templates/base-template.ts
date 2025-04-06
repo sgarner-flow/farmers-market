@@ -52,13 +52,6 @@ export function createBaseEmailTemplate(options: {
               </td>
             </tr>
             
-            <!-- Divider image -->
-            <tr>
-              <td align="center" style="padding: 10px 0;">
-                <img src="${dividerImageUrl}" alt="Divider" width="600" />
-              </td>
-            </tr>
-            
             <!-- Footer section -->
             <tr>
               <td style="padding: 20px; text-align: center; color: #666666; font-size: 12px; border-top: 1px solid #DDD;">

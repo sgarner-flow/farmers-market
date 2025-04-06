@@ -107,7 +107,7 @@ export async function POST(request: Request) {
                 <td align="center" style="padding: 20px 0;">
                   <!-- Flow logo image -->
                   <div style="max-width: 250px; margin: 0 auto;">
-                    <img src="https://flowfarmersmarket.vercel.app/flow-logo.svg" alt="Flow Farmers Market" style="display: block; width: 100%; max-width: 250px; height: auto;">
+                    <img src="https://rbreohiwrvcpfznnpumh.supabase.co/storage/v1/object/public/images//Flow-Header.png" alt="Flow Farmers Market" style="display: block; width: 100%; max-width: 250px; height: auto;">
                   </div>
                 </td>
               </tr>
@@ -160,7 +160,7 @@ export async function POST(request: Request) {
                 <td style="padding: 20px; text-align: center; color: #666666; font-size: 12px; border-top: 1px solid #DDD;">
                   <!-- Footer image -->
                   <div style="max-width: 150px; margin: 0 auto 15px auto;">
-                    <img src="https://flowfarmersmarket.vercel.app/flow-footer.svg" alt="Flow Farmers Market Footer" style="display: block; width: 100%; max-width: 150px; height: auto;">
+                    <img src="https://rbreohiwrvcpfznnpumh.supabase.co/storage/v1/object/public/images//Oneness_-_light_1.png" alt="Flow Farmers Market Footer" style="display: block; width: 100%; max-width: 150px; height: auto;">
                   </div>
                   <p style="margin-bottom: 8px;">If you wish to unsubscribe, please reply with "unsubscribe" in the subject line.</p>
                   <p style="margin-bottom: 8px;">© ${new Date().getFullYear()} Flow Farmers Market. All rights reserved.</p>
