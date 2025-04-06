@@ -453,7 +453,18 @@ export async function GET(request: Request) {
     }
 
     // Sort vendors by total transaction volume (highest to lowest)
-    vendorPaymentData.sort((a, b) => b.summary.total_volume - a.summary.total_volume);
+    // Also ensure vendors with zero transactions appear last
+    vendorPaymentData.sort((a, b) => {
+      // First prioritize vendors with transactions over those with none
+      if (a.summary.transaction_count === 0 && b.summary.transaction_count > 0) {
+        return 1; // a goes after b
+      }
+      if (a.summary.transaction_count > 0 && b.summary.transaction_count === 0) {
+        return -1; // a goes before b
+      }
+      // Then sort by total volume for vendors in the same category
+      return b.summary.total_volume - a.summary.total_volume;
+    });
 
     // Return the results
     return NextResponse.json({

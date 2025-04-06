@@ -246,6 +246,21 @@ export default function VendorPaymentsPage() {
     fetchPaymentData(selectedDate, 1, accountId, paymentId, isHighVolume ? highVolumePageSize : regularPageSize);
   }, [selectedDate]);
 
+  // Sort vendors to ensure those with 0 transactions appear last
+  const sortVendors = (vendors: VendorPaymentData[]) => {
+    return [...vendors].sort((a, b) => {
+      // First prioritize vendors with transactions over those with none
+      if (a.summary.transaction_count === 0 && b.summary.transaction_count > 0) {
+        return 1; // a goes after b
+      }
+      if (a.summary.transaction_count > 0 && b.summary.transaction_count === 0) {
+        return -1; // a goes before b
+      }
+      // Then sort by total volume for vendors in the same category
+      return b.summary.total_volume - a.summary.total_volume;
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -428,7 +443,7 @@ export default function VendorPaymentsPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-8 mb-8">
-              {paymentData.map((vendor, index) => (
+              {sortVendors(paymentData).map((vendor, index) => (
                 <div key={vendor.vendor.id || index} className="bg-white shadow rounded-lg overflow-hidden">
                   <div className="border-b border-gray-200 px-6 py-4">
                     <h3 className="text-lg font-medium text-gray-900">
