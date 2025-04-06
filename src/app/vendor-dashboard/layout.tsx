@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Vendor Dashboard | Flow Farmers Market',
@@ -16,9 +17,23 @@ export default function VendorDashboardLayout({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
-              <h1 className="text-xl font-bold">Flow Farmers Market</h1>
+              <Link href="/" className="text-xl font-bold hover:text-white/80">Flow Farmers Market</Link>
               <span className="ml-4 text-sm bg-white/20 px-2 py-1 rounded">Vendor Portal</span>
             </div>
+            <nav className="flex space-x-4">
+              <Link 
+                href="/vendor-dashboard" 
+                className="px-3 py-2 rounded-md text-sm font-medium hover:bg-market-olive-dark"
+              >
+                Dashboard
+              </Link>
+              <Link 
+                href="/vendor-dashboard/payments" 
+                className="px-3 py-2 rounded-md text-sm font-medium hover:bg-market-olive-dark"
+              >
+                Payments
+              </Link>
+            </nav>
           </div>
         </div>
       </header>

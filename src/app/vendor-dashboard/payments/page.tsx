@@ -111,6 +111,26 @@ export default function VendorPaymentsPage() {
     }).format(amount);
   };
 
+  // Sort vendors to ensure those with most transactions appear first, zero transactions at bottom
+  const sortVendors = (vendors: VendorPaymentData[]): VendorPaymentData[] => {
+    if (!vendors || vendors.length === 0) return [];
+    
+    return [...vendors].sort((a, b) => {
+      // First prioritize vendors with transactions over those with none
+      if (a.summary.transaction_count === 0 && b.summary.transaction_count > 0) {
+        return 1; // a goes after b
+      }
+      if (a.summary.transaction_count > 0 && b.summary.transaction_count === 0) {
+        return -1; // a goes before b
+      }
+      // Then sort by total volume for vendors with transactions
+      return b.summary.total_volume - a.summary.total_volume;
+    });
+  };
+
+  // Display sorted payment data
+  const vendorsToDisplay = useMemo(() => sortVendors(paymentData), [paymentData]);
+
   // Fetch payment data for the selected date
   const fetchPaymentData = async (date: string, page: number = 1, account?: string, payment?: string, pageSize: number = 10) => {
     if (page === 1) {
@@ -291,26 +311,6 @@ export default function VendorPaymentsPage() {
     fetchPaymentData(selectedDate, 1, accountId, paymentId, isHighVolume ? highVolumePageSize : regularPageSize);
   }, [selectedDate]);
 
-  // Sort vendors to ensure those with most transactions appear first, zero transactions at bottom
-  const sortVendors = (vendors: VendorPaymentData[]): VendorPaymentData[] => {
-    if (!vendors || vendors.length === 0) return [];
-    
-    return [...vendors].sort((a, b) => {
-      // First prioritize vendors with transactions over those with none
-      if (a.summary.transaction_count === 0 && b.summary.transaction_count > 0) {
-        return 1; // a goes after b
-      }
-      if (a.summary.transaction_count > 0 && b.summary.transaction_count === 0) {
-        return -1; // a goes before b
-      }
-      // Then sort by total volume for vendors with transactions
-      return b.summary.total_volume - a.summary.total_volume;
-    });
-  };
-
-  // Display sorted payment data
-  const vendorsToDisplay = useMemo(() => sortVendors(paymentData), [paymentData]);
-
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -344,13 +344,16 @@ export default function VendorPaymentsPage() {
           </div>
         </div>
 
-        {/* Advanced Lookup Form Toggle */}
-        <div className="mb-6">
+        {/* Lookup Form Toggle Button */}
+        <div className="mb-4 flex justify-end">
           <button
             onClick={() => setShowLookupForm(!showLookupForm)}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-market-green"
+            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
           >
-            {showLookupForm ? 'Hide Advanced Lookup' : 'Show Advanced Lookup'}
+            {showLookupForm ? 'Hide Lookup Form' : 'Find Specific Vendor/Payment'}
+            <svg xmlns="http://www.w3.org/2000/svg" className="ml-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
           </button>
         </div>
 
@@ -397,6 +400,19 @@ export default function VendorPaymentsPage() {
             </form>
           </div>
         )}
+
+        {/* Special Quick Links */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button 
+            onClick={() => {
+              setAccountId('');
+              fetchPaymentData(selectedDate, 1);
+            }}
+            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+          >
+            View All Accounts
+          </button>
+        </div>
 
         {/* Loading Indicator */}
         {loading && (
@@ -634,7 +650,7 @@ export default function VendorPaymentsPage() {
                     {/* Message for vendors with no transactions */}
                     {vendor.summary.transaction_count === 0 && (
                       <div className="text-center py-4 text-gray-500">
-                        No transactions recorded for this vendor on {new Date(selectedDate).toLocaleDateString()}.
+                        No transactions recorded for this vendor on {format(new Date(selectedDate), 'M/d/yyyy')}.
                       </div>
                     )}
                   </div>
