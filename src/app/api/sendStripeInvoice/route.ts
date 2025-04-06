@@ -138,6 +138,8 @@ export async function POST(request: Request) {
 
     // Prepare and send email with the correct links
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://flowfarmersmarket.vercel.app';
+    // Use the production URL specifically for images
+    const imageBaseUrl = process.env.NEXT_PUBLIC_PRODUCTION_URL || 'https://flowfarmersmarket.vercel.app';
     const emailHtml = `
     <!DOCTYPE html>
     <html lang="en-US">
@@ -158,7 +160,7 @@ export async function POST(request: Request) {
                 <td align="center" style="padding: 20px 0;">
                   <!-- Flow logo image: Using a web-hosted image that's reliable -->
                   <div style="max-width: 250px; margin: 0 auto;">
-                    <img src="https://flowfarmersmarket.vercel.app/flow-logo.svg" alt="Flow Farmers Market" style="display: block; width: 100%; max-width: 250px; height: auto;">
+                    <img src="${imageBaseUrl}/flow-logo.svg" alt="Flow Farmers Market" style="display: block; width: 100%; max-width: 250px; height: auto;">
                   </div>
                 </td>
               </tr>
@@ -197,7 +199,7 @@ export async function POST(request: Request) {
                 <td style="padding: 20px; text-align: center; color: #666666; font-size: 12px; border-top: 1px solid #DDD;">
                   <!-- Footer image: Using a web-hosted image that's reliable -->
                   <div style="max-width: 150px; margin: 0 auto 15px auto;">
-                    <img src="https://flowfarmersmarket.vercel.app/flow-footer.svg" alt="Flow Farmers Market Footer" style="display: block; width: 100%; max-width: 150px; height: auto;">
+                    <img src="${imageBaseUrl}/flow-footer.svg" alt="Flow Farmers Market Footer" style="display: block; width: 100%; max-width: 150px; height: auto;">
                   </div>
                   <p style="margin-bottom: 8px;">Best regards,<br>Flow Farmers Market Team</p>
                   <p style="margin-bottom: 8px;">© ${new Date().getFullYear()} Flow Farmers Market. All rights reserved.</p>

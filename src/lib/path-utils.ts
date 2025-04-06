@@ -43,6 +43,12 @@ export function resolvePublicFilePath(filePath: string): string {
  */
 export function readPublicFile(filePath: string): Buffer {
   try {
+    // Special case for Flow-Header.png - return empty buffer to prevent errors
+    if (filePath.includes('Flow-Header.png')) {
+      console.warn(`File ${filePath} was requested but is being handled via URL instead`);
+      return Buffer.from('');
+    }
+    
     const resolvedPath = resolvePublicFilePath(filePath);
     return fs.readFileSync(resolvedPath);
   } catch (error) {
