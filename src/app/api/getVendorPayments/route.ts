@@ -11,6 +11,24 @@ const stripe = process.env.STRIPE_SECRET_KEY
 // Increased timeout for Stripe API requests (in milliseconds)
 const STRIPE_REQUEST_TIMEOUT = process.env.NODE_ENV === 'production' ? 30000 : 60000; // 30 seconds in production, 60 in dev
 
+// Sort vendors consistently by transaction volume (highest to lowest)
+// and ensure vendors with zero transactions appear at the end
+const sortVendorData = (vendors: any[]) => {
+  if (!vendors || vendors.length === 0) return [];
+  
+  return [...vendors].sort((a, b) => {
+    // First prioritize vendors with transactions over those with none
+    if (a.summary.transaction_count === 0 && b.summary.transaction_count > 0) {
+      return 1; // a goes after b
+    }
+    if (a.summary.transaction_count > 0 && b.summary.transaction_count === 0) {
+      return -1; // a goes before b
+    }
+    // Then sort by total volume for vendors in the same category
+    return b.summary.total_volume - a.summary.total_volume;
+  });
+};
+
 export async function GET(request: Request) {
   console.log('getVendorPayments endpoint called');
   
@@ -32,6 +50,7 @@ export async function GET(request: Request) {
     // Pagination parameters
     const page = parseInt(url.searchParams.get('page') || '1');
     const limit = parseInt(url.searchParams.get('limit') || '10');
+    const paginationAccountId = url.searchParams.get('last_account_id');
     
     if (!date) {
       console.error('Date parameter is missing');
@@ -44,6 +63,9 @@ export async function GET(request: Request) {
     console.log(`Fetching payment data for date: ${date}, page: ${page}, limit: ${limit}`);
     if (specificAccount) {
       console.log(`Looking for specific account: ${specificAccount}`);
+    }
+    if (paginationAccountId) {
+      console.log(`Pagination: continuing after account: ${paginationAccountId}`);
     }
 
     // Parse the date parameter
@@ -101,12 +123,15 @@ export async function GET(request: Request) {
         date: selectedDate.toISOString(),
         vendors: [],
         directPaymentResult,
+        hasMore: false,
+        page: 1
       });
     }
 
     // Fetch connected accounts (with pagination if not looking for a specific account)
     console.log('Fetching connected accounts from Stripe');
     let stripeAccounts: Stripe.Account[] = [];
+    let hasMoreAccounts = false;
     
     try {
       if (specificAccount) {
@@ -127,18 +152,34 @@ export async function GET(request: Request) {
         }
       } else {
         // Otherwise fetch accounts with pagination
+        const listParams: Stripe.AccountListParams = { 
+          limit: limit
+        };
+        
+        // Only use starting_after if we have a valid lastAccountId and we're not on page 1
+        if (page > 1 && paginationAccountId) {
+          listParams.starting_after = paginationAccountId;
+        }
+        
+        console.log(`Fetching accounts with params:`, listParams);
+        
         const accounts = await Promise.race([
-          stripe.accounts.list({ 
-            limit: limit,
-            starting_after: page > 1 ? url.searchParams.get('last_account_id') || undefined : undefined
-          }),
+          stripe.accounts.list(listParams),
           new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Accounts listing timeout')), STRIPE_REQUEST_TIMEOUT)
           )
         ]) as Stripe.ApiList<Stripe.Account>;
         
         stripeAccounts = accounts.data;
-        console.log(`Found ${stripeAccounts.length} connected accounts from Stripe (page ${page})`);
+        hasMoreAccounts = accounts.has_more || false;
+        
+        console.log(`Found ${stripeAccounts.length} connected accounts from Stripe (page ${page}, has_more: ${hasMoreAccounts})`);
+        
+        // Log the first and last account IDs for debugging
+        if (stripeAccounts.length > 0) {
+          console.log(`First account ID: ${stripeAccounts[0].id}`);
+          console.log(`Last account ID: ${stripeAccounts[stripeAccounts.length - 1].id}`);
+        }
       }
     } catch (stripeError) {
       console.error('Error fetching Stripe accounts:', stripeError);
@@ -224,11 +265,6 @@ export async function GET(request: Request) {
             
             console.log(`Fetching payments for account: ${businessName} (${account.id})`);
             
-            // Additional optimization: For high-volume dates, prefer to get summary data only
-            if (isHighVolumeDate(selectedDate)) {
-              console.log('High volume date detected - using optimized fetching strategy');
-            }
-
             // First attempt - Get payment intents with timeout
             let paymentIntents;
             try {
@@ -444,7 +480,7 @@ export async function GET(request: Request) {
     }
 
     // Get the ID of the last account for pagination
-    const lastAccountId = stripeAccounts.length > 0 
+    const finalLastAccountId = stripeAccounts.length > 0 
       ? stripeAccounts[stripeAccounts.length - 1].id 
       : null;
 
@@ -463,29 +499,19 @@ export async function GET(request: Request) {
       }));
     }
 
-    // Sort vendors by total transaction volume (highest to lowest)
-    // Also ensure vendors with zero transactions appear last
-    vendorPaymentData.sort((a, b) => {
-      // First prioritize vendors with transactions over those with none
-      if (a.summary.transaction_count === 0 && b.summary.transaction_count > 0) {
-        return 1; // a goes after b
-      }
-      if (a.summary.transaction_count > 0 && b.summary.transaction_count === 0) {
-        return -1; // a goes before b
-      }
-      // Then sort by total volume for vendors in the same category
-      return b.summary.total_volume - a.summary.total_volume;
-    });
+    // Sort vendors by total transaction volume and place zeros at the end
+    const sortedVendorData = sortVendorData(vendorPaymentData);
+    console.log(`Sorted ${sortedVendorData.length} vendors by transaction volume`);
 
     // Return the results
     return NextResponse.json({
       success: true,
       date: selectedDate.toISOString(),
-      vendors: vendorPaymentData,
+      vendors: sortedVendorData,
       directPaymentResult,
-      hasMore: !specificAccount && stripeAccounts.length === limit,
+      hasMore: !specificAccount && hasMoreAccounts,
       page,
-      lastAccountId
+      lastAccountId: finalLastAccountId || undefined
     });
     
   } catch (error) {

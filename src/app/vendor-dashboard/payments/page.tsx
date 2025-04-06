@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { 
@@ -141,7 +141,8 @@ export default function VendorPaymentsPage() {
       const response = await fetch(url, { 
         signal: controller.signal,
         headers: {
-          'Cache-Control': 'no-cache'
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         }
       });
       
@@ -207,11 +208,15 @@ export default function VendorPaymentsPage() {
         throw new Error(data.error || 'Error in API response');
       }
       
+      // Always make sure we have properly sorted vendor data
+      const sortedVendors = sortVendors(data.vendors);
+      
       if (page === 1) {
-        setPaymentData(data.vendors);
-        setAllVendors(data.vendors);
+        setPaymentData(sortedVendors);
+        setAllVendors(sortedVendors);
       } else {
-        const newAllVendors = [...allVendors, ...data.vendors];
+        // Combine with existing vendors, then sort again to ensure proper order
+        const newAllVendors = sortVendors([...allVendors, ...sortedVendors]);
         setPaymentData(newAllVendors);
         setAllVendors(newAllVendors);
       }
@@ -254,6 +259,7 @@ export default function VendorPaymentsPage() {
     e.preventDefault();
     setCurrentPage(1);
     setAllVendors([]);
+    setLastAccountId(undefined); // Reset pagination state
     
     // Use smaller page size for high-volume dates
     const pageSize = isHighVolumeDate(selectedDate) ? 5 : 10;
@@ -262,6 +268,8 @@ export default function VendorPaymentsPage() {
   
   // Handle loading more data
   const handleLoadMore = () => {
+    if (isLoadingMore) return; // Prevent multiple simultaneous requests
+    
     const pageSize = isHighVolumeDate(selectedDate) ? 5 : 10;
     fetchPaymentData(selectedDate, currentPage + 1, accountId, paymentId, pageSize);
   };
@@ -270,6 +278,7 @@ export default function VendorPaymentsPage() {
   useEffect(() => {
     setCurrentPage(1);
     setAllVendors([]);
+    setLastAccountId(undefined); // Reset pagination when date changes
     
     // Check if this is a high-volume date and show a warning
     const isHighVolume = isHighVolumeDate(selectedDate);
@@ -282,8 +291,10 @@ export default function VendorPaymentsPage() {
     fetchPaymentData(selectedDate, 1, accountId, paymentId, isHighVolume ? highVolumePageSize : regularPageSize);
   }, [selectedDate]);
 
-  // Sort vendors to ensure those with 0 transactions appear last
-  const sortVendors = (vendors: VendorPaymentData[]) => {
+  // Sort vendors to ensure those with most transactions appear first, zero transactions at bottom
+  const sortVendors = (vendors: VendorPaymentData[]): VendorPaymentData[] => {
+    if (!vendors || vendors.length === 0) return [];
+    
     return [...vendors].sort((a, b) => {
       // First prioritize vendors with transactions over those with none
       if (a.summary.transaction_count === 0 && b.summary.transaction_count > 0) {
@@ -292,10 +303,13 @@ export default function VendorPaymentsPage() {
       if (a.summary.transaction_count > 0 && b.summary.transaction_count === 0) {
         return -1; // a goes before b
       }
-      // Then sort by total volume for vendors in the same category
+      // Then sort by total volume for vendors with transactions
       return b.summary.total_volume - a.summary.total_volume;
     });
   };
+
+  // Display sorted payment data
+  const vendorsToDisplay = useMemo(() => sortVendors(paymentData), [paymentData]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -452,7 +466,7 @@ export default function VendorPaymentsPage() {
           </div>
         )}
 
-        {!loading && paymentData.length === 0 && !error && (
+        {!loading && vendorsToDisplay.length === 0 && !error && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
             <h2 className="text-lg font-medium text-blue-800">No Payment Data Found</h2>
             <p className="mt-2 text-blue-700">
@@ -467,20 +481,21 @@ export default function VendorPaymentsPage() {
         )}
 
         {/* Payment Data Cards */}
-        {!loading && paymentData.length > 0 && (
+        {!loading && vendorsToDisplay.length > 0 && (
           <>
             <div className="mb-6">
               <h2 className="text-xl font-semibold text-market-olive mb-2">
                 Payment Summary - {new Date(selectedDate).toLocaleDateString()}
               </h2>
               <p className="text-sm text-gray-500">
-                Showing {paymentData.length} vendor{paymentData.length !== 1 ? 's' : ''}
+                Showing {vendorsToDisplay.length} vendor{vendorsToDisplay.length !== 1 ? 's' : ''}
+                {hasMorePages && ' (more available)'}
               </p>
             </div>
 
             <div className="grid grid-cols-1 gap-8 mb-8">
-              {sortVendors(paymentData).map((vendor, index) => (
-                <div key={vendor.vendor.id || index} className="bg-white shadow rounded-lg overflow-hidden">
+              {vendorsToDisplay.map((vendor, index) => (
+                <div key={`${vendor.vendor.id || ''}-${index}`} className="bg-white shadow rounded-lg overflow-hidden">
                   <div className="border-b border-gray-200 px-6 py-4">
                     <h3 className="text-lg font-medium text-gray-900">
                       {vendor.vendor.business_name}
@@ -524,90 +539,102 @@ export default function VendorPaymentsPage() {
                       </div>
                     </div>
 
-                    {/* Hourly Transaction Chart */}
-                    <div className="mb-6">
-                      <h4 className="text-sm font-medium text-gray-700 mb-4">Hourly Sales Volume (9 AM - 9 PM)</h4>
-                      <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart
-                            data={vendor.hourly_data.filter(data => data.hour >= 9 && data.hour <= 21)} // Filter for 9 AM to 9 PM
-                            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="hour" tickFormatter={formatHour} />
-                            <YAxis tickFormatter={(value: number) => `$${Math.round(value)}`} />
-                            <Tooltip 
-                              formatter={(value: number | string, name: string) => {
-                                if (name === 'volume') return [formatCurrency(value as number), 'Sales Volume'];
-                                if (name === 'count') return [value, 'Transaction Count'];
-                                return [value, name];
-                              }}
-                              labelFormatter={(label: number) => `Hour: ${formatHour(label)}`}
-                            />
-                            <Legend />
-                            <Line type="monotone" dataKey="volume" name="Sales Volume" stroke="#82ca9d" activeDot={{ r: 8 }} />
-                            <Line type="monotone" dataKey="count" name="Transactions" stroke="#8884d8" activeDot={{ r: 6 }} />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-
-                    {/* Recent Transactions Table */}
-                    {vendor.recent_transactions.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-700 mb-4">Recent Transactions</h4>
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                              <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment ID</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
-                              </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                              {vendor.recent_transactions.map((transaction) => (
-                                <tr key={transaction.id}>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    {transaction.receipt_url ? (
-                                      <a href={transaction.receipt_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                                        {transaction.id.substring(0, 10)}...
-                                      </a>
-                                    ) : (
-                                      <span>{transaction.id.substring(0, 10)}...</span>
-                                    )}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {formatCurrency(transaction.amount)}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                      transaction.status === 'succeeded' 
-                                        ? 'bg-green-100 text-green-800' 
-                                        : transaction.status === 'pending' 
-                                          ? 'bg-yellow-100 text-yellow-800'
-                                          : transaction.status === 'processing'
-                                            ? 'bg-blue-100 text-blue-800'
-                                            : transaction.status === 'requires_payment_method' || transaction.status === 'requires_confirmation'
-                                              ? 'bg-purple-100 text-purple-800'
-                                              : 'bg-red-100 text-red-800'
-                                    }`}>
-                                      {transaction.status}
-                                    </span>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {new Date(transaction.created).toLocaleString()}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {transaction.payment_method}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                    {/* Only show charts and transaction details for vendors with transactions */}
+                    {vendor.summary.transaction_count > 0 && (
+                      <>
+                        {/* Hourly Transaction Chart */}
+                        <div className="mb-6">
+                          <h4 className="text-sm font-medium text-gray-700 mb-4">Hourly Sales Volume (9 AM - 9 PM)</h4>
+                          <div className="h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <LineChart
+                                data={vendor.hourly_data.filter(data => data.hour >= 9 && data.hour <= 21)} // Filter for 9 AM to 9 PM
+                                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="hour" tickFormatter={formatHour} />
+                                <YAxis tickFormatter={(value: number) => `$${Math.round(value)}`} />
+                                <Tooltip 
+                                  formatter={(value: number | string, name: string) => {
+                                    if (name === 'volume') return [formatCurrency(value as number), 'Sales Volume'];
+                                    if (name === 'count') return [value, 'Transaction Count'];
+                                    return [value, name];
+                                  }}
+                                  labelFormatter={(label: number) => `Hour: ${formatHour(label)}`}
+                                />
+                                <Legend />
+                                <Line type="monotone" dataKey="volume" name="Sales Volume" stroke="#82ca9d" activeDot={{ r: 8 }} />
+                                <Line type="monotone" dataKey="count" name="Transactions" stroke="#8884d8" activeDot={{ r: 6 }} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
+
+                        {/* Recent Transactions Table */}
+                        {vendor.recent_transactions.length > 0 && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-700 mb-4">Recent Transactions</h4>
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                  <tr>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment ID</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                  {vendor.recent_transactions.map((transaction) => (
+                                    <tr key={transaction.id}>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        {transaction.receipt_url ? (
+                                          <a href={transaction.receipt_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                            {transaction.id.substring(0, 10)}...
+                                          </a>
+                                        ) : (
+                                          <span>{transaction.id.substring(0, 10)}...</span>
+                                        )}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {formatCurrency(transaction.amount)}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                          transaction.status === 'succeeded' 
+                                            ? 'bg-green-100 text-green-800' 
+                                            : transaction.status === 'pending' 
+                                              ? 'bg-yellow-100 text-yellow-800'
+                                              : transaction.status === 'processing'
+                                                ? 'bg-blue-100 text-blue-800'
+                                                : transaction.status === 'requires_payment_method' || transaction.status === 'requires_confirmation'
+                                                  ? 'bg-purple-100 text-purple-800'
+                                                  : 'bg-red-100 text-red-800'
+                                        }`}>
+                                          {transaction.status}
+                                        </span>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {new Date(transaction.created).toLocaleString()}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {transaction.payment_method}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    
+                    {/* Message for vendors with no transactions */}
+                    {vendor.summary.transaction_count === 0 && (
+                      <div className="text-center py-4 text-gray-500">
+                        No transactions recorded for this vendor on {new Date(selectedDate).toLocaleDateString()}.
                       </div>
                     )}
                   </div>
