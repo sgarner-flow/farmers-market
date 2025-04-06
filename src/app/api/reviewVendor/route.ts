@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import OpenAI from 'openai';
-import { randomUUID } from 'crypto';
 
 // Check for OpenAI API key
 if (!process.env.OPENAI_API_KEY) {
@@ -15,39 +14,34 @@ const openai = new OpenAI({
 
 export async function POST(request: Request) {
   try {
-    const { vendor_email, vendor_name, product_type } = await request.json();
+    // Get the applicationId from the request
+    const { applicationId } = await request.json();
 
-    if (!vendor_email || !vendor_name || !product_type) {
+    if (!applicationId) {
       return NextResponse.json(
-        { error: 'Vendor email, name, and product type are required' },
+        { error: 'Application ID is required' },
         { status: 400 }
       );
     }
 
     const supabase = createServerClient();
 
-    // First find the existing application
+    // Find the application by ID
     const { data: existingApp, error: fetchError } = await supabase
       .from('vendor_applications')
       .select('*')
-      .eq('email', vendor_email)
-      .eq('business_name', vendor_name)
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .eq('id', applicationId)
       .single();
 
-    if (fetchError && fetchError.code !== 'PGRST116') { // Not found error is ok
-      throw fetchError;
-    }
-
-    if (!existingApp) {
+    if (fetchError) {
+      console.error('Error fetching application:', fetchError);
       return NextResponse.json(
         { error: 'Application not found' },
         { status: 404 }
       );
     }
 
-    let decision: 'approved' | 'denied' | 'pending' = 'pending';
+    let decision: 'approved' | 'rejected' | 'pending' = 'pending';
     let review = '';
     let automated = true;
 
@@ -75,12 +69,13 @@ This vendor demonstrates strong alignment with our market values...`
           {
             role: "user",
             content: `Please review this vendor application:
-Business Name: ${vendor_name}
-Email: ${vendor_email}
-Product Type: ${product_type}
-Locally Sourced: ${existingApp.locally_sourced}
-Organic/Pesticide Free: ${existingApp.organic_pesticide_free}
-Eco-Friendly Packaging: ${existingApp.eco_friendly_packaging}
+Business Name: ${existingApp.business_name}
+Email: ${existingApp.email}
+Product Type: ${existingApp.product_type}
+Locally Sourced: ${existingApp.locally_sourced || 'Not specified'}
+Organic/Pesticide Free: ${existingApp.organic_pesticide_free || 'Not specified'}
+Eco-Friendly Packaging: ${existingApp.eco_friendly_packaging || 'Not specified'}
+Website: ${existingApp.vendor_website || 'Not provided'}
 
 Provide your decision and detailed explanation.`
           }
@@ -92,17 +87,10 @@ Provide your decision and detailed explanation.`
       if (content) {
         review = content;
         // Look specifically for the DECISION: prefix
-        decision = content.includes('DECISION: APPROVED') ? 'approved' : 'denied';
-        
-        // Double-check for consistency
-        const isPositiveReview = content.toLowerCase().includes('recommend') && 
-          !content.toLowerCase().includes('not recommend') &&
-          !content.toLowerCase().includes('cannot recommend');
-          
-        if (isPositiveReview && decision === 'denied') {
-          // If there's an inconsistency, default to approved for positive reviews
+        if (content.includes('DECISION: APPROVED')) {
           decision = 'approved';
-          review = 'DECISION: APPROVED\n' + review;
+        } else if (content.includes('DECISION: DENIED')) {
+          decision = 'rejected';
         }
       }
     } catch (error: any) {
@@ -122,6 +110,7 @@ Provide your decision and detailed explanation.`
       .eq('id', existingApp.id);
 
     if (updateError) {
+      console.error('Error updating application:', updateError);
       throw updateError;
     }
 
@@ -129,36 +118,30 @@ Provide your decision and detailed explanation.`
     if (decision === 'approved') {
       try {
         console.log('Application approved, attempting to send Stripe invoice...');
-        const response = await fetch('http://localhost:3001/api/sendStripeInvoice', {
+        
+        // Determine base URL for the API call
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+        const apiUrl = `${baseUrl.replace(/\/$/, '')}/api/sendStripeInvoice`;
+        
+        console.log('Sending Stripe invoice to:', apiUrl);
+        
+        const response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            email: vendor_email,
-            business_name: vendor_name,
+            email: existingApp.email,
+            business_name: existingApp.business_name,
             applicationId: existingApp.id
           })
         });
 
-        console.log('Stripe invoice endpoint response status:', response.status);
-        const responseData = await response.json();
-        console.log('Stripe invoice endpoint response:', responseData);
-
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Stripe invoice response error:', {
-            status: response.status,
-            statusText: response.statusText,
-            error: errorText
-          });
+          console.error('Stripe invoice response error:', response.status);
         }
       } catch (stripeError) {
-        console.error('Failed to send Stripe invoice:', {
-          error: stripeError,
-          message: stripeError.message,
-          stack: stripeError.stack
-        });
+        console.error('Failed to send Stripe invoice:', stripeError);
       }
     }
 

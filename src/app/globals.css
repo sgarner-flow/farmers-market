@@ -1,26 +1,166 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Custom Font Declarations */
+@font-face {
+  font-family: 'Roughwell';
+  src: url('/fonts/Roughwell.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@font-face {
+  font-family: 'Generation 1970';
+  src: url('/fonts/Generation1970.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
 
-@media (prefers-color-scheme: dark) {
+@font-face {
+  font-family: 'Generation 1970';
+  src: url('/fonts/Generation1970BoldItalic.otf') format('opentype');
+  font-weight: bold;
+  font-style: italic;
+  font-display: swap;
+}
+
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #F3EDDF;
+    --foreground: #545210;
+
+    --card: #F7F3EA;
+    --card-foreground: #545210;
+
+    --popover: #FBF9F5;
+    --popover-foreground: #545210;
+
+    --primary: #767317;
+    --primary-foreground: #FBF9F5;
+
+    --secondary: #F3EDDF;
+    --secondary-foreground: #545210;
+
+    --muted: #F7F3EA;
+    --muted-foreground: #A3A164;
+
+    --accent: #E89700;
+    --accent-foreground: #413F0D;
+
+    --destructive: #AA4B44;
+    --destructive-foreground: #FBF9F5;
+
+    --border: #DDD8CB;
+    --input: #F7F3EA;
+    --ring: #A3A164;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: #FBF9F5;
+    --sidebar-foreground: #545210;
+    --sidebar-primary: #413F0D;
+    --sidebar-primary-foreground: #FBF9F5;
+    --sidebar-accent: #DDD8CB;
+    --sidebar-accent-foreground: #413F0D;
+    --sidebar-border: #DDD8CB;
+    --sidebar-ring: #A3A164;
+  }
+
+  .dark {
+    --background: #413F0D;
+    --foreground: #F3EDDF;
+
+    --card: #545210;
+    --card-foreground: #F3EDDF;
+
+    --popover: #545210;
+    --popover-foreground: #F3EDDF;
+
+    --primary: #A3A164;
+    --primary-foreground: #413F0D;
+
+    --secondary: #545210;
+    --secondary-foreground: #F3EDDF;
+
+    --muted: #545210;
+    --muted-foreground: #DDD8CB;
+
+    --accent: #E89700;
+    --accent-foreground: #FBF9F5;
+
+    --destructive: #AA4B44;
+    --destructive-foreground: #FBF9F5;
+
+    --border: #767317;
+    --input: #767317;
+    --ring: #A3A164;
+
+    --sidebar-background: #413F0D;
+    --sidebar-foreground: #F3EDDF;
+    --sidebar-primary: #A3A164;
+    --sidebar-primary-foreground: #FBF9F5;
+    --sidebar-accent: #545210;
+    --sidebar-accent-foreground: #F3EDDF;
+    --sidebar-border: #545210;
+    --sidebar-ring: #A3A164;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border;
+    letter-spacing: 0.5px;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+    letter-spacing: 0.5px;
+  }
+
+  /* Updated heading styles per designer feedback */
+  h1 {
+    font-family: 'Roughwell', sans-serif;
+    font-weight: normal;
+  }
+  
+  h2, h3 {
+    font-family: 'Generation 1970', sans-serif;
+    font-weight: normal;
+  }
+  
+  h4 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+.hero-section {
+  background-image: linear-gradient(to bottom, rgba(243, 237, 223, 0.6), rgba(243, 237, 223, 0.8)), 
+                    url('/lovable-uploads/095250a6-31e3-4b09-b927-e53dec0c95dd.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+@media (max-width: 768px) {
+  .hero-section {
+    background-position: 65% center;
+  }
+}
+
+/* Add site-wide section styling */
+.site-container {
+  @apply max-w-6xl mx-auto px-6 sm:px-8 md:px-10 lg:px-12;
 }

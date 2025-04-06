@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import sgMail from '@sendgrid/mail';
 import { subDays } from 'date-fns';
+import fs from 'fs';
 
 if (!process.env.SENDGRID_API_KEY) {
   throw new Error('SENDGRID_API_KEY is not set');
@@ -11,106 +12,95 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const emailTemplate = (newVendors: string[]) => `
 <!DOCTYPE html>
-<html>
+<html lang="en-US">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Flow Farmers Market Weekly Bulletin</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .header {
-      background-color: #4CAF50;
-      color: white;
-      padding: 20px;
-      text-align: center;
-      border-radius: 5px 5px 0 0;
-    }
-    .content {
-      background-color: #f9f9f9;
-      padding: 20px;
-      border: 1px solid #ddd;
-      border-top: none;
-      border-radius: 0 0 5px 5px;
-    }
-    .section {
-      margin-bottom: 20px;
-    }
-    .section-title {
-      color: #2E7D32;
-      font-size: 1.2em;
-      margin-bottom: 10px;
-    }
-    .new-vendors {
-      background-color: #E8F5E9;
-      padding: 15px;
-      border-radius: 5px;
-      margin-top: 10px;
-    }
-    .new-vendors ul {
-      margin: 0;
-      padding-left: 20px;
-    }
-    .footer {
-      text-align: center;
-      margin-top: 20px;
-      padding-top: 20px;
-      border-top: 1px solid #ddd;
-      font-size: 0.9em;
-      color: #666;
-    }
-  </style>
 </head>
-<body>
-  <div class="header">
-    <h1>Flow Farmers Market Weekly Bulletin</h1>
-    <p>${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-  </div>
+<body style="margin: 0; padding: 0; background-color: #F6EEDD; font-family: Arial, Helvetica, sans-serif; color: #4A4A4A; line-height: 1.6;">
+  <!-- Preheader text (shows in email client previews) -->
+  <span style="display: none; max-height: 0px; overflow: hidden;">
+    Weekly Bulletin for Flow Farmers Market vendors.
+  </span>
+  
+  <!-- Main container -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F6EEDD;">
+    <tr>
+      <td align="center" style="padding: 20px 0;">
+        <!-- Email content container -->
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #F6EEDD; max-width: 600px; margin: 0 auto;">
+          <!-- Header section with logo -->
+          <tr>
+            <td align="center" style="padding: 20px 0;">
+              <!-- Flow logo image -->
+              <div style="max-width: 250px; margin: 0 auto;">
+                <img src="cid:flow-header" alt="Flow Farmers Market" style="display: block; width: 100%; max-width: 250px; height: auto;">
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Content section -->
+          <tr>
+            <td style="padding: 20px; background-color: #F6EEDD;">
+              <div style="margin-bottom: 25px;">
+                <h2 style="color: #71725E; font-size: 18px; margin-top: 5px; margin-bottom: 10px; font-weight: bold;">This Week's Arrival Instructions</h2>
+                <p style="margin-bottom: 10px;">Please arrive at the market by 7:00 AM to set up your booth. Remember to:</p>
+                <ul style="padding-left: 20px; margin-bottom: 0;">
+                  <li style="margin-bottom: 8px;">Bring your vendor badge</li>
+                  <li style="margin-bottom: 8px;">Set up your booth according to the market layout</li>
+                  <li style="margin-bottom: 8px;">Ensure all products are properly labeled</li>
+                  <li style="margin-bottom: 8px;">Have your payment processing system ready</li>
+                </ul>
+              </div>
 
-  <div class="content">
-    <div class="section">
-      <h2 class="section-title">This Week's Arrival Instructions</h2>
-      <p>Please arrive at the market by 7:00 AM to set up your booth. Remember to:</p>
-      <ul>
-        <li>Bring your vendor badge</li>
-        <li>Set up your booth according to the market layout</li>
-        <li>Ensure all products are properly labeled</li>
-        <li>Have your payment processing system ready</li>
-      </ul>
-    </div>
+              ${newVendors && newVendors.length > 0 ? `
+              <div style="margin-bottom: 25px;">
+                <h2 style="color: #71725E; font-size: 18px; margin-top: 20px; margin-bottom: 10px; font-weight: bold;">Welcome New Vendors!</h2>
+                <div style="background-color: #F0F7ED; padding: 15px; border-radius: 5px; border: 1px solid #E0ECD8;">
+                  <p style="margin-top: 0; margin-bottom: 10px;">We're excited to welcome these new vendors to our market this week:</p>
+                  <ul style="padding-left: 20px; margin-bottom: 15px;">
+                    ${newVendors.map(vendor => `<li style="margin-bottom: 8px;">${vendor}</li>`).join('')}
+                  </ul>
+                  <p style="margin-bottom: 0; font-weight: bold;">Community Building:</p>
+                  <p style="margin-bottom: 0;">Please take a moment to introduce yourself to our new vendors on market day! Strong vendor relationships help create a welcoming atmosphere that shoppers can feel. Consider exchanging contact information and sharing your experience with them.</p>
+                </div>
+              </div>
+              ` : ''}
 
-    ${newVendors.length > 0 ? `
-    <div class="section">
-      <h2 class="section-title">Welcome New Vendors!</h2>
-      <div class="new-vendors">
-        <p>We're excited to welcome these new vendors to our market:</p>
-        <ul>
-          ${newVendors.map(vendor => `<li>${vendor}</li>`).join('')}
-        </ul>
-      </div>
-    </div>
-    ` : ''}
-
-    <div class="section">
-      <h2 class="section-title">Important Reminders</h2>
-      <ul>
-        <li>Please ensure all products are properly labeled with prices</li>
-        <li>Keep your booth area clean and organized</li>
-        <li>Follow all food safety guidelines</li>
-        <li>Report any issues to market management</li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="footer">
-    <p>If you have any questions, please contact us at sgarns@gmail.com</p>
-  </div>
+              <div style="margin-bottom: 25px;">
+                <h2 style="color: #71725E; font-size: 18px; margin-top: 20px; margin-bottom: 10px; font-weight: bold;">Important Reminders</h2>
+                <ul style="padding-left: 20px; margin-bottom: 0;">
+                  <li style="margin-bottom: 8px;">Please ensure all products are properly labeled with prices</li>
+                  <li style="margin-bottom: 8px;">Keep your booth area clean and organized</li>
+                  <li style="margin-bottom: 8px;">Follow all food safety guidelines</li>
+                  <li style="margin-bottom: 8px;">Report any issues to market management</li>
+                </ul>
+              </div>
+              
+              <div style="text-align: center; padding: 20px 0;">
+                <!-- Divider image -->
+                <div style="max-width: 96px; margin: 0 auto;">
+                  <img src="cid:divider-padded" alt="Divider" style="display: block; width: 100%; max-width: 96px; height: auto;">
+                </div>
+              </div>
+              
+              <!-- Footer -->
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #DDD; text-align: center; color: #666666; font-size: 12px;">
+                <!-- Footer image -->
+                <div style="max-width: 150px; margin: 0 auto 15px auto;">
+                  <img src="cid:oneness-light" alt="Flow Farmers Market Footer" style="display: block; width: 100%; max-width: 150px; height: auto;">
+                </div>
+                <p style="margin-bottom: 8px;">If you have any questions, please contact us at sgarns@gmail.com</p>
+                <p style="margin-bottom: 8px;">© ${new Date().getFullYear()} Flow Farmers Market. All rights reserved.</p>
+                <p style="margin-bottom: 0;">698 NE 1st Avenue, Miami, FL 33132</p>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
 `;
@@ -129,25 +119,61 @@ export async function POST(request: Request) {
 
     // Fetch vendors approved in the last 7 days
     const sevenDaysAgo = subDays(new Date(), 7).toISOString();
+    console.log(`Looking for vendors approved since: ${sevenDaysAgo}`);
+    
     const { data: newVendors, error: newVendorsError } = await supabase
       .from('vendor_applications')
-      .select('business_name')
+      .select('business_name, created_at')
       .eq('status', 'approved')
-      .gte('created_at', sevenDaysAgo);
+      .gt('created_at', sevenDaysAgo);  // Using created_at instead of updated_at
 
     if (newVendorsError) throw newVendorsError;
 
+    console.log(`Found ${newVendors?.length || 0} new vendors in the last 7 days`);
+    if (newVendors?.length > 0) {
+      console.log('New vendors:', newVendors.map(v => ({ name: v.business_name, created: v.created_at })));
+    }
+
     // Prepare new vendors list
     const newVendorsList = newVendors?.map(v => v.business_name) || [];
+
+    // Get the from email from environment variables
+    const fromEmail = process.env.SENDGRID_FROM_EMAIL || 'sgarns@gmail.com';
 
     // Send emails to all approved vendors
     const emailPromises = approvedVendors?.map(async (vendor) => {
       try {
         const msg = {
           to: vendor.email,
-          from: 'sgarns@gmail.com',
+          from: {
+            email: fromEmail,
+            name: 'Flow Farmers Market'
+          },
           subject: 'Flow Farmers Market Weekly Bulletin',
           html: emailTemplate(newVendorsList),
+          attachments: [
+            {
+              filename: 'Flow-Header.png',
+              type: 'image/png',
+              content_id: 'flow-header',
+              content: fs.readFileSync('public/Flow-Header.png').toString('base64'),
+              disposition: 'inline'
+            },
+            {
+              filename: 'Dividier-Padded.png',
+              type: 'image/png', 
+              content_id: 'divider-padded',
+              content: fs.readFileSync('public/Dividier-Padded.png').toString('base64'),
+              disposition: 'inline'
+            },
+            {
+              filename: 'Oneness_-_light_1.png',
+              type: 'image/png',
+              content_id: 'oneness-light',
+              content: fs.readFileSync('public/Oneness_-_light_1.png').toString('base64'),
+              disposition: 'inline'
+            }
+          ]
         };
 
         await sgMail.send(msg);

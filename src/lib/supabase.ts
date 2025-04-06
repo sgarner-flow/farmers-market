@@ -10,11 +10,16 @@ export const createClient = () => {
 };
 
 // Create a server-side Supabase client with service role
+// NOTE: This should only be used in server components or API routes
 export const createServerClient = () => {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+  
+  return createSupabaseClient(supabaseUrl, supabaseKey);
 };
 
 // Types for your database schema
@@ -89,7 +94,7 @@ export type Database = {
           organic_pesticide_free: 'Yes' | 'Some' | 'No';
           eco_friendly_packaging: 'Yes' | 'Working on it' | 'No';
           email: string;
-          status: 'pending' | 'approved' | 'rejected';
+          status: 'pending' | 'approved' | 'rejected' | 'removed' | 'invited';
           review_notes?: string;
           stripe_customer_id?: string;
           stripe_account_id?: string;
@@ -97,6 +102,8 @@ export type Database = {
           account_setup_link?: string;
           payment_status: 'pending' | 'paid' | 'failed';
           last_emailed?: string;
+          vendor_website?: string;
+          location?: 'Miami' | 'FLL' | 'Brickell' | 'Aventura' | 'El Portal' | 'Granada';
         };
         Insert: {
           id?: string;
@@ -107,7 +114,7 @@ export type Database = {
           organic_pesticide_free: 'Yes' | 'Some' | 'No';
           eco_friendly_packaging: 'Yes' | 'Working on it' | 'No';
           email: string;
-          status?: 'pending' | 'approved' | 'rejected';
+          status?: 'pending' | 'approved' | 'rejected' | 'removed' | 'invited';
           review_notes?: string;
           stripe_customer_id?: string;
           stripe_account_id?: string;
@@ -115,6 +122,8 @@ export type Database = {
           account_setup_link?: string;
           payment_status?: 'pending' | 'paid' | 'failed';
           last_emailed?: string;
+          vendor_website?: string;
+          location?: 'Miami' | 'FLL' | 'Brickell' | 'Aventura' | 'El Portal' | 'Granada';
         };
         Update: {
           id?: string;
@@ -125,7 +134,7 @@ export type Database = {
           organic_pesticide_free?: 'Yes' | 'Some' | 'No';
           eco_friendly_packaging?: 'Yes' | 'Working on it' | 'No';
           email?: string;
-          status?: 'pending' | 'approved' | 'rejected';
+          status?: 'pending' | 'approved' | 'rejected' | 'removed' | 'invited';
           review_notes?: string;
           stripe_customer_id?: string;
           stripe_account_id?: string;
@@ -133,6 +142,8 @@ export type Database = {
           account_setup_link?: string;
           payment_status?: 'pending' | 'paid' | 'failed';
           last_emailed?: string;
+          vendor_website?: string;
+          location?: 'Miami' | 'FLL' | 'Brickell' | 'Aventura' | 'El Portal' | 'Granada';
         };
       };
       mailing_list: {

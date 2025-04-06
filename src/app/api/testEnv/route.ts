@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import OpenAI from 'openai';
-import Stripe from 'stripe';
 import { Resend } from 'resend';
+import { createStripeClient } from '@/lib/stripe';
 
 export async function GET() {
   const results: Record<string, { status: 'success' | 'error'; message: string }> = {};
@@ -50,9 +50,7 @@ export async function GET() {
 
   // Test Stripe Connection
   try {
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-      apiVersion: '2023-10-16'
-    });
+    const stripe = createStripeClient(process.env.STRIPE_SECRET_KEY!);
     
     await stripe.balance.retrieve();
     
@@ -99,5 +97,5 @@ export async function GET() {
     success: !hasErrors,
     results,
     timestamp: new Date().toISOString()
-  }, {
- 
+  });
+} 

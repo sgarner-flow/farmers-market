@@ -1,0 +1,510 @@
+<!DOCTYPE html><html><head><title> </title><meta name="description" content=""><meta name="keywords" content=""><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"><meta property="og:title" content="Life in Flow"><meta property="og:image" content="https://cdn.flow.life/624fcfd6-0b78-4794-be9c-0bd126019121"><meta name="robots" content="index,follow"><!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-TB52TZ8K');</script>
+<!-- End Google Tag Manager -->
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+</script><link rel="icon" type="image/ico" href="/assets/favicon.ico"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer"><!-- swiper-bundle--><link rel="stylesheet" href="/assets/lib/swiperjs/swiper-bundle.min.css"><!-- main css--><link href="/assets/css/corporate/corporatemaster.css" rel="stylesheet"><!-- Font css--><link href="/assets/fonts/fonts.css" rel="stylesheet"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"><!-- if IEscript(src='js/html5shiv.js')--><!-- main script--><script src="/assets/js/jquery-1.9.1.min.js"></script><!-- wow script--><script src="/assets/js/wow.min.js"></script><!-- swiper script--><script src="/assets/lib/swiperjs/swiper-bundle.min.js"></script><!-- general script--><script src="/assets/js/corporate/corporatemaster.js"></script><link href="/assets/css/general/pagenotfound.css" rel="stylesheet"></head><body class="corporate_master"> <!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TB52TZ8K"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<!-- Menu side bar--><div class="mb-side-bar true"><div class="menu-icon true"><img src="/assets/images/flow-wave.svg"></div><div class="close-btn-menu"><figure><img src="/assets/images/x-icon.svg"></figure></div><div class="mb-outer-cell"><nav class="mb-side-inn" itemscope="" itemtype="http://www.schema.org/SiteNavigationElement"><ul class="mb-menu-header"><li itemprop="name"><a itemprop="url" href="/en/"><i class="corporate-icon"></i>Discover Flow</a></li></ul><ul class="mb-menu-list"><li class="c_mission_values" itemprop="name"><a itemprop="url" href="/en/mission-and-values">Mission &amp; Values</a></li><li class="flowtrip" itemprop="name"><a itemprop="url" href="/en/flow-trip">The Flow Trip</a></li><li itemprop="name"><a itemprop="url" href="flow-goods">Shop Flow Goods</a></li><li itemprop="name"><a itemprop="url" href="#" onclick="f_goToContactUs()">Contact Us</a></li><li itemprop="name"><a itemprop="url" href="https://jobs.lever.co/flowlife" target="_blank">Careers</a></li></ul><ul class="mb-menu-property-list"><li itemprop="name"><a itemprop="url" href="/en/properties/fort-lauderdale/"> <i class="property-icon"></i>Fort Lauderdale</a></li><li itemprop="name"><a itemprop="url" href="/en/properties/miami/"> <i class="property-icon"></i>Miami</a></li><li itemprop="name"><a itemprop="url" href="https://flowhouse.life?utm_source=flow_home&amp;utm_medium=website&amp;utm_campaign=navigation" target="_blank"><i class="property-icon"></i>Flow House</a></li><li class="city-header">RIYADH KSA</li><li itemprop="name"><a itemprop="url" href="/en/properties/riyadh-narjis/"> <i class="property-icon"></i>Narjis</a></li><li itemprop="name"><a itemprop="url" href="/en/properties/riyadh-granada/"> <i class="property-icon"></i>Granada</a></li></ul></nav></div></div><!-- header part--><header class="header inner-page-header show light"><!-- navigation part--><div class="left-push-menu"><div class="menu-icon menu-icon1"><figure><div class="img"></div></figure></div><div class="menu-icon menu-icon2"><figure><img src="/assets/images/flow-wave.svg"></figure></div></div><a class="logo" href="/en/"><figure><div class="img" alt="brand logo">         </div></figure></a><div class="language-select"><link href="/assets/css/components/languageselect.css" rel="stylesheet"><script src="/assets/js/componants/languageselect.js"></script></div><div class="icons">           </div></header><!-- banner area part--><!-- start--><div class="main-page pagenotfound"><div class="container"><h1 class="oversized">404</h1><h3>Oops! Looks like you are a little lost.</h3><p> Sorry, we couldn’t find this page, but don’t worry, <br>let us help you find your flow again.</p><p class="hide">no route found</p><a class="btn schedule-a-tour-btn btn is-rounded is-colored" href="/">Return Home</a></div></div><script src="https://www.google.com/recaptcha/api.js?onload=recaptchaOnload&amp;render=explicit" async defer></script><script type="text/javascript">const _lighthouseDomain='https://lighthouse.us.deepsky.life';
+var recapthaObjs=[];
+var recaptchLoaded=false;
+
+function recaptchaOnload(){        
+  recaptchLoaded=true;
+  for(var i=0;i<recapthaObjs.length;i++){
+    try{
+      recapthaObjs[i].captacha= grecaptcha.render(
+          recapthaObjs[i].data.recaptcha.id,
+          {'size':((recapthaObjs[i].data.recaptcha?.size)?recapthaObjs[i].data.recaptcha.size:'normal'),
+          'callback':recapthaObjs[i].f_isFormValid.bind(recapthaObjs[i]),
+          "sitekey": '6LcFkWUhAAAAALWUQ70PEhcGWEgTxIIw4imsHQmp', 
+          "theme": "light"}
+        );
+
+    }
+    catch(e){console.log(e)}
+  }
+  console.log('recaptcha loaded');
+}
+var _settings={propertyKey:'flow', 
+  propertyId:'00000000-0000-0000-0000-000000000000', furnishedAmenity: 'furnished', 
+  furnishedPriceMatrix: '',
+  priceGrouping: '1'
+}
+try{
+  var _mainReferrer = null;
+  if(sessionStorage.getItem('mainReferrer')){
+    _mainReferrer = JSON.parse(sessionStorage.getItem('mainReferrer'));
+  }
+  // Check if mainReferrer hasn't been set yet
+  if (!_mainReferrer) {
+    var referrer=null;
+    // Store the http referrer in the web storage  
+    if(document.referrer?.length>0 && document.referrer.indexOf(window.location.host)<0){
+      referrer= document.referrer;
+    }
+    // Store utm_source and utm_medium
+    var params = new URLSearchParams(window.location.search)
+    var utm_source=params.get('utm_source');
+    var utm_medium=params.get('utm_medium');
+    var utm_campaign=params.get('utm_campaign');
+    if((utm_source && utm_medium)||referrer){
+      _mainReferrer={referrer:referrer, utm_source:utm_source, utm_medium:utm_medium, utm_campaign:utm_campaign};
+      sessionStorage.setItem('mainReferrer', JSON.stringify(_mainReferrer));
+    }
+  }
+}
+catch(ex){
+  console.log(ex);
+}
+
+function _getSourceName(){  
+  try{
+    var source=_getSource();
+    return (source)?source.sourceName:'Property Website';
+  }
+  catch(e){console.log(e);return 'Property Website';}
+}
+
+function _getSourceQuery(){  
+  try{
+    return ((_mainReferrer && _mainReferrer.utm_source)?'utm_source='+_mainReferrer.utm_source:'')+
+    ((_mainReferrer && _mainReferrer.utm_medium)?'&utm_medium='+_mainReferrer.utm_medium:'')+
+    ((_mainReferrer && _mainReferrer.utm_campaign)?'&utm_campaign='+_mainReferrer.utm_campaign:'');
+  }
+  catch(e){console.log(e);return 'Property Website';}
+}
+
+function _getSource(){  
+  var source=null;
+  try{
+      if(window._mainReferrer && window.propertyObj?.marketing?.sources?.length>0){
+          var sources = propertyObj.marketing.sources;
+          sources.forEach((s) => {
+              if(s.referrals){
+                  s.referrals.forEach((r) => { 
+                      if(r.referralUrlHost?.length>0 
+                          && _mainReferrer.referrer?.toLowerCase().indexOf(r.referralUrlHost.toLowerCase())>-1){
+                          source=s;
+                      }
+                      
+                      if(r.referralUrlQuery?.length>0 
+                          && r.referralUrlQuery.toLowerCase().indexOf('utm_source='+_mainReferrer.utm_source?.toLowerCase())>-1
+                          && r.referralUrlQuery.toLowerCase().indexOf('utm_medium='+_mainReferrer.utm_medium?.toLowerCase())>-1){
+                          source=s;
+                          source['query'] = r.referralUrlQuery.indexOf('&utm_campaign')>-1?r.referralUrlQuery.substring(0, r.referralUrlQuery.indexOf('&utm_campaign')):r.referralUrlQuery;
+                          if(r.referralUrlQuery.toLowerCase().indexOf('utm_campaign='+_mainReferrer.utm_campaign?.toLowerCase())>-1){
+                              source['query'] = r.referralUrlQuery;
+                              return source;
+                          }
+                      }
+                  });
+              }
+          });
+      }
+  }
+  catch(e){console.log(e)}
+  return source;
+}
+
+_contactUsCls = function (data) {
+  this.data = data;
+  this.data.values = {};
+  this.captacha=null;
+
+  this.init=function(){
+    try{          
+      //set captcha
+      if(this.data?.recaptcha?.id && !(this.data?.recaptcha?.disable)){
+        if(!recaptchLoaded)
+          recapthaObjs.push(this)
+        else{
+          this.captacha= grecaptcha.render(
+            data.recaptcha.id,
+            {callback:this.f_isFormValid.bind(this), "sitekey": '6LcFkWUhAAAAALWUQ70PEhcGWEgTxIIw4imsHQmp', "theme": "light"}
+          );
+        }
+      }
+      //set onkeyup
+      if(typeof this.data.keyupSelector === 'string')
+        this.data.keyupSelector=$(this.data.keyupSelector);
+
+      this.data.keyupSelector.on('keyup keypress blur change', () => {
+        this.f_isFormValid();
+      });
+      
+      //set submit
+      if(typeof this.data.submit.selector === 'string')
+        this.data.submit.selector=$(this.data.submit.selector);
+      
+      this.data.submit.selector.on('click', (event ) =>{
+        event.stopPropagation();
+        this.f_submitForm((err, result) => {
+          if(this.data.submit.callback)
+            this.data.submit.callback(err, result)
+        });
+        return false;
+      });
+    }
+    catch(e){console.log(e)}
+  }
+
+  this.getValues = function(){
+    for(i in this.data.form){
+      try{              
+        if(typeof this.data.form[i] === 'string')
+          this.data.form[i] = $('#'+this.data.form[i]);
+        
+        this.data.values[i]=this.data.form[i].val();
+      }
+      catch(e){console.log(e)}
+    }
+  }
+  
+  this.f_isFormValid = function(response) {
+    this.getValues();
+    var values=this.data.values;
+    var recaptcha_result='';      
+    var result = '';  
+    if(!(!(Object.hasOwn(values, 'phone'))||
+          values.phone==''||
+          (
+            !!values.phone
+            && String(values.phone).toLowerCase().match(
+              /^([0-9\-\(\)\+\s]{5,})$/)?.length>0
+          )
+        ))
+        result='Please enter a valid phone number';
+    if(!((values.phone=='' && !this.data.form.phone.data('areacode')) ||
+      (this.data.form.phone && !this.data.form.phone.data('areacode')) ||
+      (this.data.form.phone && this.data.form.phone.data('areacode')
+            && !!values.phone
+            && String(values.phone).toLowerCase().match(
+              /^\+([0-9\-\(\)\+\s]{8,})$/)?.length>0)))
+        result='Please enter phone number with area code ex. +966-11-520-7100';
+
+    if(!(!!values.email && String(values.email).toLowerCase().match(
+          /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+        )?.length>0))
+      result='Please enter email address';
+    if (!(!(Object.hasOwn(values, 'first')) || !!values.first))result='Please enter first name';
+    if (!(!(Object.hasOwn(values, 'last')) || !!values.last))result='Please enter last name';
+    if (!(!(Object.hasOwn(values, 'name')) || !!values.name))result='Please enter name';
+    if (!(!(Object.hasOwn(values, 'interest')) || !!values.interest))result='Please select interest';
+    
+    //validate extra fields (check if field is required)
+    if(result=='' && Object.hasOwn(this.data, 'extraFields')) {
+      try{
+        this.data.extraFields.forEach((o)=>{
+          if(o.required == 'true' && 
+            (($('#'+this.data.preFix+o.name).attr('type')=='checkbox' && !$('#'+this.data.preFix+o.name).is(':checked'))
+              || 
+              ($('#'+this.data.preFix+o.name).attr('type')!='checkbox' && $('#'+this.data.preFix+o.name).val().length<1))
+          ){
+            result='missing '+o.title;
+          }
+        })
+      }
+      catch(ex){}
+    }
+    if(result==='' && this.captacha!=null){
+        try{
+          recaptcha_result = grecaptcha.getResponse(this.captacha);
+          this.data.recaptcha.token=recaptcha_result;
+          if(!recaptcha_result) result='Missing Captcha';
+        }
+        catch(e){
+          console.log(e);
+        }
+    }       
+    if(result==='') {
+      this.data.submit.selector.removeClass('disabled');
+    }
+    else {
+      this.data.submit.selector.addClass('disabled');
+    }
+    
+    if(this.data.submit.errorMsg)
+      $(this.data.submit.errorMsg).html(result);
+    return result;
+  }
+
+  this.f_submitForm = function(f_callback){ 
+    const validResult = this.f_isFormValid();
+    if(validResult!='') {
+      if(f_callback)f_callback(validResult);
+    }
+    else{
+      console.log('valid form');  
+      if(!this.data.recaptcha || this.data.recaptcha.token || this.data.recaptcha.disable){
+          if(Object.hasOwn(this.data.submit, 'preSubmit'))this.data.submit.preSubmit(this);
+          this.data.submit.selector.addClass('disabled');
+          var reason = (Object.hasOwn(this.data.values, 'interest'))?this.data.values.interest:'';
+          var propertyId = _settings.propertyId;
+
+          if(Object.hasOwn(this.data.values, 'name')){
+            const nameParts = this.data.values.name.split(' ');
+            this.data.values.first = nameParts[0];
+            this.data.values.last = ((nameParts.length<2)?'n/a':nameParts[1]);
+          }
+          var source=_getSourceName();
+          var sourceQuery=_getSourceQuery();
+          if(!reason || reason.startsWith('prp_')){
+            if(reason && reason.startsWith('prp_')) propertyId=reason.replace('prp_', '');
+            if(!Object.hasOwn(this.data, 'extra')) this.data.extra={};
+            if(Object.hasOwn(this.data, 'extraFields')) {
+              try{
+                this.data.extraFields.forEach((o)=>{
+                  if($('#'+this.data.preFix+o.name).length>0){
+                    this.data.extra[o.name] = $('#'+this.data.preFix+o.name).val();
+                  }
+                })
+              }
+              catch(ex){}
+            }
+            var body = { ...{
+                firstName: this.data.values.first,
+                lastName: (Object.hasOwn(this.data.values, 'last'))?this.data.values.last:'',
+                email: this.data.values.email,
+                phone: this.data.values.phone,
+                message: this.data.values.message,
+                source:source,
+                sourceQuery: sourceQuery,
+                pageKey: 'pagenotfound',
+                url: window.location.href,
+                token:this.data.recaptcha?.token,
+                extra:this.data.extra
+              }, ...this.data.extra};
+            fetch('/apipublic/prospect?propertyId='+propertyId, {
+              headers: {
+                'api-key': 'public',
+                'Content-type': 'application/json'
+              },
+              method: 'POST',
+              body: JSON.stringify(body),
+            }).then(response => {
+              try{
+                gtag('event', Object.hasOwn(this.data.submit, 'gtag')?this.data.submit.gtag:'contactus_submit', {
+                  'button_name': 'myButton',
+                  'screen_name': 'pagenotfound',
+                  "email": this.data.values.email,
+                  "phone_number": this.data.values.phone
+                });
+                gtag('set', 'user_data', { "email": this.data.values.email,
+                "phone_number": this.data.values.phone });
+              }
+              catch(ex){console.log(ex)}
+              if(f_callback)f_callback(null, this.data);
+            });
+          }
+          else{
+            fetch('/apipublic/corporate/contact-us-by-reason', {
+              headers: {
+                'api-key': 'public',
+                'Content-type': 'application/json'
+              },
+              method: 'POST',
+              body: JSON.stringify({
+                name: this.data.values.name,
+                email: this.data.values.email,
+                phone: this.data.values.phone,
+                message: this.data.values.message,
+                company: this.data.values.company,
+                reason: reason,
+                source: source,
+                sourceQuery: sourceQuery,
+                pageKey: 'pagenotfound',
+                url: window.location.href,
+                token:this.data.recaptcha.token
+              }),
+              
+            }).then(response => {
+              console.log(response);
+              try{
+                gtag('event', 'corporate_contactus_submit', {
+                  'button_name': 'myButton',
+                  'screen_name': 'pagenotfound',
+                  "email": this.data.values.email,
+                  "phone_number": this.data.values.phone
+                });
+                gtag('set', 'user_data', { "email": this.data.values.email,
+                "phone_number": this.data.values.phone });
+              }
+              catch(ex){console.log(ex)}
+              if(f_callback)f_callback(null, data);
+            });
+          }              
+      }
+    }
+  }
+  
+  this.init();
+}
+
+_swiperCls = function () {
+  this.f_verticalSwiper = function(element, activeIndexChange){
+    var isMac = (navigator.userAgent.toLowerCase().search("macintosh") > -1 && navigator.userAgent.search("iPhone")<0)//(navigator.userAgent.search("Safari") >= 0 || navigator.userAgent.search("Macintosh") >= 0);
+    //enable cssMode in safari
+    var obj  = new Swiper(element, {
+      speed: 400,  
+      longSwipes:false,
+      longSwipesRatio:0.5,
+      longSwipesMs:300,
+      shortSwipes: true,      
+      mousewheel: {
+      },
+      freeMode: false,
+      cssMode:isMac,
+      direction: "vertical",
+      on:{
+        activeIndexChange:activeIndexChange
+      }
+    });
+    obj.on('slideChange', function () {        
+      try{
+        gtag('event', 'carousel_scroll', {
+                    'carousel_name': $(this.el).data('carousel_name'),
+                    'card_name': $(this.slides[this.activeIndex]).data('card_name'),
+                    "index": this.activeIndex,
+                    "page": 'pagenotfound',
+                    'carousel_orientation' : "vertical"
+                  });
+      }
+      catch(ex){console.log(ex)}
+    });
+    return obj;
+  } 
+  this.f_buildThreeSlideSwiper = function(parentElement){  
+    const swiper1 = new Swiper(parentElement+ ' .swiper', {
+      loop: true,
+      pagination: {
+        el: parentElement+ ' .swiper-pagination',
+        type: 'bullets',
+      },
+      
+      breakpoints: {
+          0: {
+            slidesPerView: 1
+          },
+          1025: {
+            slidesPerView: 3
+          },
+      },
+    
+      // Navigation arrows
+      navigation: {
+        nextEl: parentElement+ ' .swiper-button-next',
+        prevEl: parentElement+ ' .swiper-button-prev',
+      },
+      
+    });
+    
+    if($(parentElement + ' .swiper-wrapper').children().length==3){
+      $(parentElement + ' .swiper-button-next').addClass('show-mobile');
+      $(parentElement + ' .swiper-button-prev').addClass('show-mobile');
+    }
+  }
+
+  this.f_buildHorizontalSwiper = function(parentElement, options){  
+    const _options={...{
+      loop: true,
+      pagination: {
+        el: parentElement+ ' .swiper-pagination',
+        type: 'bullets',
+      },            
+      breakpoints: {
+          0: {
+            slidesPerView: 1
+          },
+          1025: {
+            slidesPerView: 3
+          },
+      },
+      // Navigation arrows
+      navigation: {
+        nextEl: parentElement+ ' .swiper-button-next',
+        prevEl: parentElement+ ' .swiper-button-prev',
+      },
+    }, ...options};
+    const swiper1 = new Swiper(parentElement+ ' .swiper', _options);
+
+    swiper1.on('slideChange', function () {        
+      try{
+        gtag('event', 'carousel_swipe', {
+                    'carousel_name': $(this.el).data('carousel_name'),
+                    'card_name': $(this.slides[this.activeIndex]).data('card_name'),
+                    "index": this.activeIndex,
+                    'carousel_orientation' : "horizontal"
+                  });
+      }
+      catch(ex){}
+    });
+    try{          
+      if($(parentElement + ' .swiper-wrapper').children().length==3){
+        $(parentElement + ' .swiper-button-next').addClass('show-mobile');
+        $(parentElement + ' .swiper-button-prev').addClass('show-mobile');
+      }
+    } catch(ex){}
+    return swiper1;
+  }
+}</script><!-- Google tag (gtag.js) -->
+<script async="" src="https://www.googletagmanager.com/gtag/js?id=G-6Z25CHMBGY"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-6Z25CHMBGY');
+</script>
+
+<!-- Hotjar Tracking Code for https://flow.life -->
+<script>
+    (function(h,o,t,j,a,r){
+        h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+        h._hjSettings={hjid:4936773,hjsv:6};
+        a=o.getElementsByTagName('head')[0];
+        r=o.createElement('script');r.async=1;
+        r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+        a.appendChild(r);
+    })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+</script>
+
+<!-- Schema markup code -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Corporation",
+  "name": "Flow",
+  "alternateName": 
+       [
+	   "Flow Global",
+	   "Flow Global Holdings",
+	   "Flow Life"
+	   ], 
+  "url": "https://www.flow.life/",
+  "logo": "https://www.flow.life/assets/images/logo_color.svg",
+  "sameAs": 
+        [
+		"https://www.instagram.com/livelifeinflow",
+		"https://www.crunchbase.com/organization/flow-e3bc"
+		],
+  "founder": "Adam Neumann",
+  "foundingDate": "August 2022",
+  "mainEntityOfPage": 
+      [
+	   "https://www.businessinsider.com/adam-neumann-flow-apartment-startup-tour-florida-wework-2023-12",
+	   "https://therealdeal.com/miami/2024/03/19/neumanns-flow-plans-offices-retail-apartments-in-miami/",
+	   "https://thehustle.co/adam-neumann-s-apartment-startup-is-here"
+	   ]
+}
+</script><script>if(!window.propertyObj) window.propertyObj = {marketing:{sources:[]}};
+try{
+  propertyObj.marketing.sources = [];      
+} catch(e){console.log(e)}</script></body></html>

@@ -13,7 +13,8 @@ const vendorApplicationSchema = z.object({
   organic_pesticide_free: z.enum(['Yes', 'Some', 'No']),
   eco_friendly_packaging: z.enum(['Yes', 'Working on it', 'No']),
   email: z.string().email('Please enter a valid email address'),
-  vendor_website: z.string().optional()
+  vendor_website: z.string().optional(),
+  location: z.enum(['Miami', 'FLL', 'Brickell', 'Aventura', 'El Portal', 'Granada'])
 });
 
 type VendorApplicationForm = z.infer<typeof vendorApplicationSchema>;
@@ -50,6 +51,7 @@ export default function ApplyToVend() {
             vendor_website: data.vendor_website || '',
             status: 'pending',
             payment_status: 'pending',
+            location: data.location,
             created_at: new Date().toISOString(),
           },
         ])
@@ -66,9 +68,7 @@ export default function ApplyToVend() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          vendor_email: data.email,
-          vendor_name: data.business_name,
-          product_type: data.product_type
+          applicationId: application.id
         }),
       });
 
@@ -185,24 +185,43 @@ export default function ApplyToVend() {
 
           {/* Eco-friendly Packaging */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Do you use eco-friendly packaging?
+            <label htmlFor="eco_friendly_packaging" className="block text-sm font-medium text-gray-700 mb-1">
+              Does your business use eco-friendly packaging?
             </label>
-            <div className="space-y-2">
-              {['Yes', 'Working on it', 'No'].map((option) => (
-                <label key={option} className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    value={option}
-                    {...register('eco_friendly_packaging')}
-                    className="text-green-600 focus:ring-green-500"
-                  />
-                  <span className="text-gray-700">{option}</span>
-                </label>
-              ))}
-            </div>
+            <select
+              id="eco_friendly_packaging"
+              {...register('eco_friendly_packaging')}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            >
+              <option value="Yes">Yes</option>
+              <option value="Working on it">Working on it</option>
+              <option value="No">No</option>
+            </select>
             {errors.eco_friendly_packaging && (
               <p className="mt-1 text-sm text-red-600">{errors.eco_friendly_packaging.message}</p>
+            )}
+          </div>
+
+          {/* Location */}
+          <div>
+            <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
+              Preferred Market Location
+            </label>
+            <select
+              id="location"
+              {...register('location')}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            >
+              <option value="">Select a location</option>
+              <option value="Miami">Miami</option>
+              <option value="FLL">FLL</option>
+              <option value="Brickell">Brickell</option>
+              <option value="Aventura">Aventura</option>
+              <option value="El Portal">El Portal</option>
+              <option value="Granada">Granada</option>
+            </select>
+            {errors.location && (
+              <p className="mt-1 text-sm text-red-600">{errors.location.message}</p>
             )}
           </div>
 

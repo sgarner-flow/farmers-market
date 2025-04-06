@@ -1,0 +1,10 @@
+<svg width="250" height="80" viewBox="0 0 250 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="250" height="80" fill="#71725E" rx="8" />
+  <!-- Leaf icon -->
+  <path d="M30 40C30 40 40 25 55 30C70 35 65 55 45 60C25 65 20 45 30 40Z" fill="#A7C957" />
+  <path d="M45 45C45 45 35 43 33 50" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" />
+  <!-- FLOW text -->
+  <text x="85" y="43" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#F3EDDF">FLOW</text>
+  <!-- FARMERS MARKET text -->
+  <text x="85" y="63" font-family="Arial, sans-serif" font-size="14" fill="#F3EDDF">FARMERS MARKET</text>
+</svg> 

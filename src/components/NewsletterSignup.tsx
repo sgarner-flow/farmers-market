@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function NewsletterSignup() {
   const [email, setEmail] = useState('');
@@ -40,53 +43,53 @@ export default function NewsletterSignup() {
   };
 
   return (
-    <div className="bg-white p-8 rounded-lg shadow-md max-w-md mx-auto">
-      <h2 className="text-2xl font-bold text-green-900 mb-4">
-        Stay Updated
-      </h2>
-      <p className="text-gray-600 mb-6">
+    <div className="bg-market-cream p-8 rounded-lg shadow-md max-w-md mx-auto border border-market-olive/10">
+      <h3 className="text-xl font-medium text-market-olive mb-4">
+        Get Market Updates
+      </h3>
+      <p className="text-market-olive/80 mb-6 text-sm">
         Subscribe to receive weekly updates about vendors, special events, and seasonal produce at Flow Farmers Market.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+        <div className="space-y-2">
+          <Label htmlFor="name" className="text-market-olive">
             Name
-          </label>
-          <input
+          </Label>
+          <Input
             type="text"
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            className="bg-white border-market-olive/20 focus:border-market-olive focus:ring-market-olive"
             required
           />
         </div>
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-market-olive">
             Email
-          </label>
-          <input
+          </Label>
+          <Input
             type="email"
             id="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            className="bg-white border-market-olive/20 focus:border-market-olive focus:ring-market-olive"
             required
           />
         </div>
 
-        <button
+        <Button
           type="submit"
           disabled={status === 'loading'}
-          className="w-full bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-market-green hover:bg-market-olive text-white"
         >
           {status === 'loading' ? 'Subscribing...' : 'Subscribe'}
-        </button>
+        </Button>
 
         {message && (
-          <p className={`text-sm ${status === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+          <p className={`text-sm ${status === 'success' ? 'text-market-green' : 'text-destructive'}`}>
             {message}
           </p>
         )}

@@ -1,15 +1,57 @@
-# Flow Farmers Market
+# Flow Farmers Market Website
 
-A modern web application for connecting local farmers and artisans with their community. Built with Next.js 14, TypeScript, Tailwind CSS, and Supabase.
+A modern website for Flow Farmers Market, featuring vendor applications, newsletter signups, and an admin portal.
 
 ## Features
 
-- Modern, responsive landing page
-- Supabase Authentication for user management
-- Supabase Database for vendor and market data
-- Vendor application system
-- Newsletter signup
-- Vendor directory
+- **Public Website**: Information about the market, vendors, and schedule
+- **Vendor Application**: Form for prospective vendors to apply
+- **Newsletter Signup**: Email collection for market updates
+- **Admin Portal**: Password-protected admin area for managing vendors and the mailing list
+
+## Admin Portal
+
+To access the admin portal, navigate to `/admin` on the website. You will be prompted for a password.
+
+**Password**: `flowlife123`
+
+### Vendor Management
+
+The vendor portal allows administrators to:
+
+1. **View all vendor applications** with their details and AI-generated reviews
+2. **Filter vendors** by status (pending, approved, rejected, removed)
+3. **Search vendors** by business name or email
+4. **View detailed information** about each vendor, including:
+   - Contact information
+   - Product type
+   - Sustainability practices
+   - Application date
+   - AI review notes
+5. **Re-trigger AI reviews** of vendor applications
+6. **Remove vendors** who violate market policies (without deleting their data)
+7. **Restore removed vendors** if needed
+
+### Mailing List Management
+
+The mailing list section displays all subscribers to the market newsletter.
+
+## Development
+
+This website is built with:
+
+- Next.js 15.2
+- Tailwind CSS
+- Supabase (for database and authentication)
+- TypeScript
+
+To run the development server:
+
+```bash
+npm run dev
+```
+
+Navigate to [http://localhost:3000](http://localhost:3000) to view the site.
 
 ## Getting Started
 

@@ -1,0 +1,17 @@
+<svg width="250" height="20" viewBox="0 0 250 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main line -->
+  <rect x="25" y="8" width="200" height="4" rx="2" fill="#71725E" />
+  
+  <!-- Left leaf decoration -->
+  <path d="M25 10C25 10 30 5 35 7C40 9 38 15 30 17C22 19 20 12 25 10Z" fill="#A7C957" />
+  
+  <!-- Right leaf decoration -->
+  <path d="M225 10C225 10 220 5 215 7C210 9 212 15 220 17C228 19 230 12 225 10Z" fill="#A7C957" />
+  
+  <!-- Small dots for extra decoration -->
+  <circle cx="55" cy="10" r="2" fill="#A7C957" />
+  <circle cx="85" cy="10" r="2" fill="#A7C957" />
+  <circle cx="125" cy="10" r="3" fill="#A7C957" />
+  <circle cx="165" cy="10" r="2" fill="#A7C957" />
+  <circle cx="195" cy="10" r="2" fill="#A7C957" />
+</svg> 
