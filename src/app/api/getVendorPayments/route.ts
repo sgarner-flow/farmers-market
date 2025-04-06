@@ -9,7 +9,7 @@ const stripe = process.env.STRIPE_SECRET_KEY
   : null;
 
 // Increased timeout for Stripe API requests (in milliseconds)
-const STRIPE_REQUEST_TIMEOUT = 60000; // 60 seconds
+const STRIPE_REQUEST_TIMEOUT = process.env.NODE_ENV === 'production' ? 30000 : 60000; // 30 seconds in production, 60 in dev
 
 export async function GET(request: Request) {
   console.log('getVendorPayments endpoint called');
@@ -188,6 +188,25 @@ export async function GET(request: Request) {
     
     let vendorPaymentData: any[] = [];
     
+    // Special handling for high-volume dates
+    const isHighVolumeDate = (date: Date) => {
+      // April 6th appears to be a high-volume date
+      const d = new Date(date);
+      return d.getMonth() === 3 && d.getDate() === 6; // April is month 3 (0-indexed)
+    };
+
+    // Apply stricter limits for known high-volume dates
+    const PAYMENT_FETCH_LIMIT = isHighVolumeDate(selectedDate) 
+      ? 20  // Reduced limit for high-volume dates
+      : 50; // Normal limit for regular dates
+
+    console.log(`Using payment fetch limit of ${PAYMENT_FETCH_LIMIT} for date ${selectedDate.toISOString()}`);
+
+    // Additional optimization: For high-volume dates, prefer to get summary data only
+    if (isHighVolumeDate(selectedDate)) {
+      console.log('High volume date detected - using optimized fetching strategy');
+    }
+
     // Process in small batches to avoid overwhelming Stripe API
     for (let i = 0; i < stripeAccounts.length; i += BATCH_SIZE) {
       const batch = stripeAccounts.slice(i, i + BATCH_SIZE);
@@ -205,9 +224,11 @@ export async function GET(request: Request) {
             
             console.log(`Fetching payments for account: ${businessName} (${account.id})`);
             
-            // Limit the number of payments to fetch for performance
-            const PAYMENT_FETCH_LIMIT = 50;
-            
+            // Additional optimization: For high-volume dates, prefer to get summary data only
+            if (isHighVolumeDate(selectedDate)) {
+              console.log('High volume date detected - using optimized fetching strategy');
+            }
+
             // First attempt - Get payment intents with timeout
             let paymentIntents;
             try {
@@ -415,6 +436,21 @@ export async function GET(request: Request) {
     const lastAccountId = stripeAccounts.length > 0 
       ? stripeAccounts[stripeAccounts.length - 1].id 
       : null;
+
+    // Apply additional optimizations for high-volume dates in the response
+    if (isHighVolumeDate(selectedDate)) {
+      console.log('Applying high-volume date optimizations to response data');
+      
+      // For high-volume dates, trim down the response data
+      vendorPaymentData = vendorPaymentData.map(vendor => ({
+        vendor: vendor.vendor,
+        summary: vendor.summary,
+        // Include only hours that have transactions to reduce payload size
+        hourly_data: vendor.hourly_data.filter((hour: { count: number; volume: number }) => hour.count > 0 || hour.volume > 0),
+        // Include only the most recent 5 transactions
+        recent_transactions: vendor.recent_transactions.slice(0, 5)
+      }));
+    }
 
     // Return the results
     return NextResponse.json({

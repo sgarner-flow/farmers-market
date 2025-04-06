@@ -67,6 +67,13 @@ type ApiResponse = {
   error?: string;
 };
 
+// Add a helper function to detect high volume dates
+const isHighVolumeDate = (dateStr: string) => {
+  const date = new Date(dateStr);
+  // April 6th is known to be a high-volume date
+  return date.getMonth() === 3 && date.getDate() === 6; // April is month 3 (0-indexed)
+};
+
 export default function VendorPaymentsPage() {
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [loading, setLoading] = useState(false);
@@ -84,6 +91,9 @@ export default function VendorPaymentsPage() {
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
   const [allVendors, setAllVendors] = useState<VendorPaymentData[]>([]);
 
+  // In the VendorPaymentsPage component, add a state for showing high-volume warnings
+  const [showHighVolumeWarning, setShowHighVolumeWarning] = useState<boolean>(false);
+
   // Format hour for X-axis display
   const formatHour = (hour: number) => {
     if (hour === 0) return '12 AM';
@@ -100,7 +110,7 @@ export default function VendorPaymentsPage() {
   };
 
   // Fetch payment data for the selected date
-  const fetchPaymentData = async (date: string, page: number = 1, account?: string, payment?: string) => {
+  const fetchPaymentData = async (date: string, page: number = 1, account?: string, payment?: string, pageSize: number = 10) => {
     if (page === 1) {
       setLoading(true);
       setPaymentData([]);
@@ -114,14 +124,18 @@ export default function VendorPaymentsPage() {
     setError(null);
     
     try {
-      let url = `/api/getVendorPayments?date=${date}&page=${page}&limit=10`;
+      let url = `/api/getVendorPayments?date=${date}&page=${page}&limit=${pageSize}`;
       if (account) url += `&account=${account}`;
       if (payment) url += `&payment=${payment}`;
       if (page > 1 && lastAccountId) url += `&last_account_id=${lastAccountId}`;
       
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30-second timeout
+      // Increase timeout for high-volume dates
+      const timeoutMs = isHighVolumeDate(date) ? 60000 : 30000; // 60 seconds for high-volume dates, 30 for normal
       
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      
+      // Add cache-control hints for browsers
       const response = await fetch(url, { 
         signal: controller.signal,
         headers: {
@@ -133,7 +147,11 @@ export default function VendorPaymentsPage() {
       
       if (!response.ok) {
         if (response.status === 504) {
-          throw new Error('Request timed out. The server took too long to respond - try a different date or a more specific search.');
+          throw new Error(
+            'The request timed out due to high data volume. ' +
+            'Try selecting a different date, using a more specific search, ' +
+            'or try again later when the system is less busy.'
+          );
         }
         const errorText = await response.text();
         throw new Error(errorText || `Server error (${response.status})`);
@@ -169,7 +187,7 @@ export default function VendorPaymentsPage() {
       
       if (err instanceof Error) {
         if (err.name === 'AbortError') {
-          errorMessage = 'Request timed out. The server took too long to respond.';
+          errorMessage = 'Request timed out. The server took too long to respond. Try a different date or a more specific search.';
         } else {
           errorMessage = err.message;
         }
@@ -198,19 +216,32 @@ export default function VendorPaymentsPage() {
     e.preventDefault();
     setCurrentPage(1);
     setAllVendors([]);
-    fetchPaymentData(selectedDate, 1, accountId, paymentId);
+    
+    // Use smaller page size for high-volume dates
+    const pageSize = isHighVolumeDate(selectedDate) ? 5 : 10;
+    fetchPaymentData(selectedDate, 1, accountId, paymentId, pageSize);
   };
   
   // Handle loading more data
   const handleLoadMore = () => {
-    fetchPaymentData(selectedDate, currentPage + 1, accountId, paymentId);
+    const pageSize = isHighVolumeDate(selectedDate) ? 5 : 10;
+    fetchPaymentData(selectedDate, currentPage + 1, accountId, paymentId, pageSize);
   };
 
   // Load data when the component mounts or when the selected date changes
   useEffect(() => {
     setCurrentPage(1);
     setAllVendors([]);
-    fetchPaymentData(selectedDate);
+    
+    // Check if this is a high-volume date and show a warning
+    const isHighVolume = isHighVolumeDate(selectedDate);
+    setShowHighVolumeWarning(isHighVolume);
+    
+    // For high-volume dates, use a smaller page size to improve loading times
+    const highVolumePageSize = 5; // Smaller page size for high-volume dates
+    const regularPageSize = 10;   // Regular page size for normal dates
+    
+    fetchPaymentData(selectedDate, 1, accountId, paymentId, isHighVolume ? highVolumePageSize : regularPageSize);
   }, [selectedDate]);
 
   return (
@@ -551,6 +582,29 @@ export default function VendorPaymentsPage() {
               </div>
             )}
           </>
+        )}
+
+        {/* High-volume date warning component to the JSX */}
+        {showHighVolumeWarning && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 my-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-yellow-800">High Volume Date Warning</h3>
+                <div className="mt-2 text-sm text-yellow-700">
+                  <p>
+                    You've selected April 6th which contains a large volume of transactions. 
+                    Loading may take longer and some data might be trimmed for performance.
+                    For best results, use specific account lookups or try a different date.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
