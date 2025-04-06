@@ -3,14 +3,21 @@ import { createServerClient } from '@/lib/supabase';
 import Stripe from 'stripe';
 import { createStripeClient } from '@/lib/stripe';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set');
-}
-
-const stripe = createStripeClient(process.env.STRIPE_SECRET_KEY);
+// Check for Stripe API key - don't throw during build time
+const stripe = process.env.STRIPE_SECRET_KEY 
+  ? createStripeClient(process.env.STRIPE_SECRET_KEY)
+  : null;
 
 export async function GET(request: Request) {
   try {
+    // Verify Stripe client is initialized at runtime
+    if (!stripe) {
+      return NextResponse.json(
+        { error: 'STRIPE_SECRET_KEY is not set' },
+        { status: 500 }
+      );
+    }
+
     const url = new URL(request.url);
     const date = url.searchParams.get('date');
     const specificAccount = url.searchParams.get('account');

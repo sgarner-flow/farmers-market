@@ -50,7 +50,11 @@ export async function GET() {
 
   // Test Stripe Connection
   try {
-    const stripe = createStripeClient(process.env.STRIPE_SECRET_KEY!);
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error('STRIPE_SECRET_KEY is not set');
+    }
+    
+    const stripe = createStripeClient(process.env.STRIPE_SECRET_KEY);
     
     await stripe.balance.retrieve();
     

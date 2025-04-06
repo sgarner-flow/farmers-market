@@ -4,18 +4,15 @@ import { createStripeClient } from '@/lib/stripe';
 import sgMail from '@sendgrid/mail';
 import fs from 'fs';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set');
+// Check for API keys - don't throw during build time
+const stripe = process.env.STRIPE_SECRET_KEY 
+  ? createStripeClient(process.env.STRIPE_SECRET_KEY)
+  : null;
+
+// Initialize SendGrid if API key is available
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 }
-
-const stripe = createStripeClient(process.env.STRIPE_SECRET_KEY);
-
-// Make sure to initialize SendGrid at the top of the file
-if (!process.env.SENDGRID_API_KEY) {
-  throw new Error('SENDGRID_API_KEY is not set');
-}
-
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 export async function POST(request: Request) {
   try {
@@ -30,6 +27,21 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Email, business name, and application ID are required' },
         { status: 400 }
+      );
+    }
+
+    // Verify API clients are initialized at runtime
+    if (!stripe) {
+      return NextResponse.json(
+        { error: 'STRIPE_SECRET_KEY is not set' },
+        { status: 500 }
+      );
+    }
+
+    if (!process.env.SENDGRID_API_KEY) {
+      return NextResponse.json(
+        { error: 'SENDGRID_API_KEY is not set' },
+        { status: 500 }
       );
     }
 
@@ -253,14 +265,9 @@ export async function POST(request: Request) {
       console.log('Email sent successfully:', result);
 
     } catch (emailError: any) {
-      // Log the full error details with type assertion
-      console.error('Failed to send email:', {
-        error: emailError,
+      console.error('Error sending email:', {
         message: emailError.message,
-        response: emailError.response?.body,
-        stack: emailError.stack
       });
-
       // Try sending with basic configuration
       try {
         console.log('Attempting simplified email send...');
@@ -302,11 +309,10 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error in sendStripeInvoice:', {
-      error,
+    console.error('Error sending invoice:', {
       message: error.message,
-      stack: error.stack
     });
+    
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }
