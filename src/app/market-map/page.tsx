@@ -7,6 +7,40 @@ import { Database } from '@/lib/supabase';
 
 type VendorApplication = Database['public']['Tables']['vendor_applications']['Row'];
 
+// Define location addresses and coordinates for each market
+const marketLocations = {
+  Miami: {
+    address: "698 NE 1st Avenue, Miami, FL 33132",
+    name: "Flow Miami - Downtown Promenade",
+    mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3592.6985921046396!2d-80.18967668496555!3d25.781397583636264!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x88d9b6a01f47f72b%3A0xa6553d9d330353b8!2s698%20NE%201st%20Ave%2C%20Miami%2C%20FL%2033132!5e0!3m2!1sen!2sus!4v1650301246972!5m2!1sen!2sus"
+  },
+  FLL: {
+    address: "501 SE 17th Street, Fort Lauderdale, FL 33316",
+    name: "Flow FLL - Las Olas Market",
+    mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3580.202743392616!2d-80.13862388495793!3d26.100446983486868!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x88d901a1d8321de5%3A0x9d0a484e1bd93a36!2s501%20SE%2017th%20St%2C%20Fort%20Lauderdale%2C%20FL%2033316!5e0!3m2!1sen!2sus!4v1650301323426!5m2!1sen!2sus"
+  },
+  Brickell: {
+    address: "901 S Miami Avenue, Miami, FL 33130",
+    name: "Flow Brickell - Waterfront Plaza",
+    mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3593.1387864009566!2d-80.19392568496586!3d25.766357983644626!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x88d9b7c3a4a4d01f%3A0xd5d0af45114bd9b9!2s901%20S%20Miami%20Ave%2C%20Miami%2C%20FL%2033130!5e0!3m2!1sen!2sus!4v1650301383472!5m2!1sen!2sus"
+  },
+  Aventura: {
+    address: "19501 Biscayne Blvd, Aventura, FL 33180",
+    name: "Flow Aventura - Mall Courtyard",
+    mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3583.0551822772134!2d-80.14603188495969!3d26.03811348360057!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x88d9acf1ee9507d5%3A0x731e59717a05a2!2s19501%20Biscayne%20Blvd%2C%20Aventura%2C%20FL%2033180!5e0!3m2!1sen!2sus!4v1650301438761!5m2!1sen!2sus"
+  },
+  "El Portal": {
+    address: "500 NE 87th Street, El Portal, FL 33138",
+    name: "Flow El Portal - Community Square",
+    mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3590.2018633183647!2d-80.18769688496406!3d25.85000008361108!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x88d9b1f2c8567f85%3A0x9956c9724c87d992!2s500%20NE%2087th%20St%2C%20El%20Portal%2C%20FL%2033138!5e0!3m2!1sen!2sus!4v1650301491762!5m2!1sen!2sus"
+  },
+  Granada: {
+    address: "200 Anastasia Avenue, Coral Gables, FL 33134",
+    name: "Flow Granada - Fountain Plaza",
+    mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3593.5687855257566!2d-80.27392128496613!3d25.75133658365178!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x88d9b7e77d488513%3A0x3e17cf86095b6ca1!2s200%20Anastasia%20Ave%2C%20Coral%20Gables%2C%20FL%2033134!5e0!3m2!1sen!2sus!4v1650301535762!5m2!1sen!2sus"
+  }
+};
+
 export default function MarketMapPage() {
   const [vendors, setVendors] = useState<VendorApplication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -85,24 +119,80 @@ export default function MarketMapPage() {
   };
   
   const tentVendors = getTentVendors();
+  const currentMarket = marketLocations[location as keyof typeof marketLocations];
   
   return (
     <main className="min-h-screen bg-[#F3EDDF] py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header with back button */}
-        <div className="mb-8">
-          <Link href="/" className="text-market-olive hover:text-market-green transition-colors">
-            Back to Homepage
-          </Link>
-        </div>
-        
         {/* Title */}
         <h1 className="text-4xl text-market-brown mb-8">VENDOR MAP</h1>
         
+        {/* Google Maps Location */}
+        <div className="bg-white rounded-lg shadow-md p-5 mb-8">
+          <div className="flex flex-col md:flex-row">
+            <div className="md:w-1/3 mb-4 md:mb-0 md:pr-6">
+              <h2 className="text-2xl font-semibold text-market-brown mb-2">{currentMarket.name}</h2>
+              <p className="text-market-olive mb-4">{currentMarket.address}</p>
+              
+              <div className="bg-market-green/10 rounded-lg p-4 mb-4">
+                <h3 className="font-medium text-market-green mb-2">Market Day</h3>
+                <p className="text-market-olive">Every Sunday, 10:00am–3:00pm</p>
+              </div>
+              
+              <div className="bg-market-brown/10 rounded-lg p-4">
+                <h3 className="font-medium text-market-brown mb-2">Vendor Schedule</h3>
+                <p className="text-market-olive">Load-in: 8:00–10:00am</p>
+                <p className="text-market-olive">Load-out: 3:00–5:00pm</p>
+              </div>
+              
+              {/* Directions button */}
+              <a 
+                href={`https://maps.google.com/?q=${encodeURIComponent(currentMarket.address)}`}
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="mt-6 inline-block bg-market-green text-white px-4 py-2 rounded-md hover:bg-market-green/90 transition-colors"
+              >
+                <div className="flex items-center">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  </svg>
+                  Get Directions
+                </div>
+              </a>
+            </div>
+            
+            <div className="md:w-2/3">
+              <div className="relative h-0 pb-[56.25%]">
+                <iframe 
+                  src={currentMarket.mapUrl}
+                  className="absolute top-0 left-0 w-full h-full rounded-lg"
+                  style={{ border: 0 }}
+                  allowFullScreen={false}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title={`Map of ${currentMarket.name}`}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        
         {/* Map container with legend */}
         <div className="bg-[#F1E9D6] p-8 rounded-lg relative mb-8">
-          {/* Legend */}
-          <div className="absolute top-4 right-4 bg-white p-4 rounded-lg shadow-sm">
+          {/* Vendor Map title with Last Updated date */}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold text-market-brown">Vendor Map</h2>
+            <div className="text-market-olive flex items-center">
+              <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              <span>Last updated: {new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' }).replace(/\//g, '/')}</span>
+            </div>
+          </div>
+
+          {/* Legend - repositioned to be below the title and last updated info */}
+          <div className="bg-white p-4 rounded-lg shadow-sm inline-block mb-6 float-right">
             <h3 className="text-market-brown mb-2">Legend</h3>
             <div className="flex items-center mb-2">
               <div className="w-5 h-5 border-2 border-market-brown bg-white mr-2"></div>
@@ -114,8 +204,8 @@ export default function MarketMapPage() {
             </div>
           </div>
           
-          {/* Location selector */}
-          <div className="mb-10">
+          {/* Location selector - clear the float */}
+          <div className="mb-10 clear-both">
             <label htmlFor="location-select" className="mr-2 font-medium text-market-brown">
               Market Location:
             </label>

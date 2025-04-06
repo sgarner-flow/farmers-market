@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 const Navbar = () => {
   const [prevScrollPos, setPrevScrollPos] = useState(0);
@@ -34,53 +35,47 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [prevScrollPos]);
 
-  // Background styles based on scrolled state - increased opacity to match Flow.life
-  const navBgStyle = scrolled 
-    ? 'bg-[#F3EDDF]/90 backdrop-blur-sm'
-    : 'bg-black/75 backdrop-blur-sm';
+  // Background styles based on scrolled state - transparent like in the Figma
+  const navBgStyle = scrolled ? 'bg-black/30 backdrop-blur-sm' : 'bg-transparent';
 
   return (
     <nav 
       className={`fixed top-0 z-50 w-full transition-all duration-300 ${
         visible ? 'translate-y-0' : '-translate-y-full'
-      } ${isHomePage ? navBgStyle : 'bg-[#F3EDDF]'}`}
+      } ${navBgStyle}`}
     >
-      <div className="container mx-auto flex items-center justify-center py-4">
+      <div className="container mx-auto flex items-center justify-center py-4 px-4">
         {isHomePage ? (
           // Show regular navigation on homepage
           <>
-            <div className="hidden md:flex items-center space-x-6">
+            <div className="hidden md:flex items-center space-x-8">
               <button 
                 onClick={() => scrollToSection('about')}
-                className={`${scrolled ? 'text-[#545210]' : 'text-[#F3EDDF]'} hover:text-market-green transition-colors font-medium`}
+                className="text-white hover:text-gray-200 transition-colors font-medium"
               >
                 About
               </button>
               <button 
                 onClick={() => scrollToSection('details')}
-                className={`${scrolled ? 'text-[#545210]' : 'text-[#F3EDDF]'} hover:text-market-green transition-colors font-medium`}
+                className="text-white hover:text-gray-200 transition-colors font-medium"
               >
                 Market Details
               </button>
               <button 
                 onClick={() => scrollToSection('vendors')}
-                className={`${scrolled ? 'text-[#545210]' : 'text-[#F3EDDF]'} hover:text-market-green transition-colors font-medium`}
+                className="text-white hover:text-gray-200 transition-colors font-medium"
               >
                 Our Vendors
               </button>
               <Link
                 href="/market-map"
-                className={`${scrolled ? 'text-[#545210]' : 'text-[#F3EDDF]'} hover:text-market-green transition-colors font-medium`}
+                className="text-white hover:text-gray-200 transition-colors font-medium"
               >
                 Market Map
               </Link>
               <button 
                 onClick={() => scrollToSection('apply')}
-                className={`border transition-colors ${
-                  scrolled 
-                    ? 'border-[#545210] text-[#545210] hover:bg-[#545210] hover:text-white' 
-                    : 'border-[#F3EDDF] text-[#F3EDDF] hover:bg-[#F3EDDF] hover:text-[#545210]'
-                } px-4 py-2 rounded-md font-medium`}
+                className="border border-white text-white hover:bg-white hover:text-market-green transition-colors px-5 py-2 rounded-md font-medium"
               >
                 Apply to Vend
               </button>
@@ -89,17 +84,13 @@ const Navbar = () => {
               <div className="flex space-x-4">
                 <Link
                   href="/market-map"
-                  className={`${scrolled ? 'text-[#545210]' : 'text-[#F3EDDF]'} hover:text-market-green transition-colors font-medium`}
+                  className="text-white hover:text-gray-200 transition-colors font-medium"
                 >
                   Map
                 </Link>
                 <button
                   onClick={() => scrollToSection('apply')}
-                  className={`border transition-colors ${
-                    scrolled 
-                      ? 'border-[#545210] text-[#545210] hover:bg-[#545210] hover:text-white' 
-                      : 'border-[#F3EDDF] text-[#F3EDDF] hover:bg-[#F3EDDF] hover:text-[#545210]'
-                  } px-4 py-2 rounded-md font-medium`}
+                  className="border border-white text-white hover:bg-white hover:text-market-green transition-colors px-4 py-2 rounded-md font-medium"
                 >
                   Apply
                 </button>
@@ -109,15 +100,15 @@ const Navbar = () => {
         ) : (
           // Show minimal navigation on other pages
           <div className="flex items-center space-x-4">
-            <Link href="/" className="text-market-olive hover:text-market-green transition-colors">
-              <Button variant="ghost" className="text-market-olive">
+            <Link href="/" className="text-market-brown hover:text-market-green transition-colors">
+              <Button variant="ghost" className="text-market-brown">
                 Back to Homepage
               </Button>
             </Link>
             
             {pathname !== "/market-map" && (
-              <Link href="/market-map" className="text-market-olive hover:text-market-green transition-colors">
-                <Button variant="ghost" className="text-market-olive">
+              <Link href="/market-map" className="text-market-brown hover:text-market-green transition-colors">
+                <Button variant="ghost" className="text-market-brown">
                   Market Map
                 </Button>
               </Link>
