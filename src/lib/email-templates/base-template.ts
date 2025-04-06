@@ -10,10 +10,10 @@ export function createBaseEmailTemplate(options: {
   mainContent: string;
   footerContent?: string;
 }) {
-  // Use hardcoded URLs for all images to avoid filesystem access issues
-  const logoUrl = 'https://flowfarmersmarket.vercel.app/flow-logo.svg';
-  const footerLogoUrl = 'https://flowfarmersmarket.vercel.app/flow-footer.svg';
-  const headerImageUrl = 'https://flowfarmersmarket.vercel.app/Flow-Header.png';
+  // Use the getEmailImageUrl function which has special handling for email images
+  const logoUrl = getEmailImageUrl('flow-logo.svg');
+  const dividerImageUrl = getEmailImageUrl('Dividier-Padded.png');
+  const footerImageUrl = getEmailImageUrl('flow-footer.svg');
   
   return `
   <!DOCTYPE html>
@@ -45,13 +45,6 @@ export function createBaseEmailTemplate(options: {
               </td>
             </tr>
             
-            <!-- Header banner image -->
-            <tr>
-              <td align="center" style="padding-bottom: 20px;">
-                <img src="${headerImageUrl}" alt="Flow Header" style="width:100%; max-width:600px;" />
-              </td>
-            </tr>
-            
             <!-- Content section -->
             <tr>
               <td style="padding: 20px; background-color: #F6EEDD;">
@@ -59,12 +52,19 @@ export function createBaseEmailTemplate(options: {
               </td>
             </tr>
             
+            <!-- Divider image -->
+            <tr>
+              <td align="center" style="padding: 10px 0;">
+                <img src="${dividerImageUrl}" alt="Divider" width="600" />
+              </td>
+            </tr>
+            
             <!-- Footer section -->
             <tr>
               <td style="padding: 20px; text-align: center; color: #666666; font-size: 12px; border-top: 1px solid #DDD;">
                 <!-- Footer image -->
-                <div style="max-width: 150px; margin: 0 auto 15px auto;">
-                  <img src="${footerLogoUrl}" alt="Flow Farmers Market Footer" style="display: block; width: 100%; max-width: 150px; height: auto;">
+                <div style="margin: 0 auto 15px auto;">
+                  <img src="${footerImageUrl}" alt="Flow Farmers Market Footer" width="150" />
                 </div>
                 ${options.footerContent || `
                 <p style="margin-bottom: 8px;">© ${new Date().getFullYear()} Flow Farmers Market. All rights reserved.</p>

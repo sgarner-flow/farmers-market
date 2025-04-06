@@ -31,10 +31,14 @@ export function getEmailImageUrl(imagePath: string): string {
     return `${baseUrl}/flow-divider.png`;
   }
   if (imageName.includes('flow-footer') || imageName === 'flow-footer.svg') {
+    // Return an absolute URL for the SVG file
     return `${baseUrl}/flow-footer.svg`;
   }
   if (imageName.includes('flow-logo') || imageName === 'flow-logo.svg') {
     return `${baseUrl}/flow-logo.svg`;
+  }
+  if (imageName.includes('dividier') || imageName.includes('divider-padded')) {
+    return `${baseUrl}/Dividier-Padded.png`;
   }
   
   // Default handling for other images
