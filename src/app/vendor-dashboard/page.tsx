@@ -1,10 +1,29 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-export default function VendorDashboard() {
+// Loading fallback component
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          <h1 className="text-3xl font-bold text-market-olive mb-6">Vendor Dashboard</h1>
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            <div className="h-20 bg-gray-200 rounded w-full mt-4"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Content component that uses search params
+function VendorDashboardContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
@@ -99,5 +118,14 @@ export default function VendorDashboard() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Main component with suspense boundary
+export default function VendorDashboard() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <VendorDashboardContent />
+    </Suspense>
   );
 } 

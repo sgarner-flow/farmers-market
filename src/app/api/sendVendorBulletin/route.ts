@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import sgMail from '@sendgrid/mail';
 import { subDays, format, addDays } from 'date-fns';
 import fs from 'fs';
+import { readPublicFile } from '@/lib/path-utils';
 
 // Check for SendGrid API key with better error handling
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
@@ -258,21 +259,21 @@ export async function POST(request: Request) {
             filename: 'Flow-Header.png',
             type: 'image/png',
             content_id: 'flow-header',
-            content: fs.readFileSync('public/Flow-Header.png').toString('base64'),
+            content: readPublicFile('public/Flow-Header.png').toString('base64'),
             disposition: 'inline'
           },
           {
             filename: 'Dividier-Padded.png',
             type: 'image/png', 
             content_id: 'divider-padded',
-            content: fs.readFileSync('public/Dividier-Padded.png').toString('base64'),
+            content: readPublicFile('public/Dividier-Padded.png').toString('base64'),
             disposition: 'inline'
           },
           {
             filename: 'Oneness_-_light_1.png',
             type: 'image/png',
             content_id: 'oneness-light',
-            content: fs.readFileSync('public/Oneness_-_light_1.png').toString('base64'),
+            content: readPublicFile('public/Oneness_-_light_1.png').toString('base64'),
             disposition: 'inline'
           }
         ]

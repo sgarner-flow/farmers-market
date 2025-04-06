@@ -2,31 +2,54 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import OpenAI from 'openai';
 
-// Check for OpenAI API key
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('OPENAI_API_KEY is not set');
-}
-
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Check for OpenAI API key - but don't throw during build time
+const openai = process.env.OPENAI_API_KEY 
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 export async function POST(request: Request) {
+  console.log('reviewVendor endpoint called');
+  
   try {
     // Get the applicationId from the request
-    const { applicationId } = await request.json();
+    let requestBody;
+    try {
+      requestBody = await request.json();
+      console.log('Request body:', JSON.stringify(requestBody));
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError);
+      return NextResponse.json(
+        { error: 'Invalid request body' },
+        { status: 400 }
+      );
+    }
+    
+    const { applicationId } = requestBody;
 
     if (!applicationId) {
+      console.error('Missing applicationId in request');
       return NextResponse.json(
         { error: 'Application ID is required' },
         { status: 400 }
       );
     }
 
+    // Verify OpenAI client is initialized at runtime
+    if (!openai) {
+      console.error('OPENAI_API_KEY is not set');
+      return NextResponse.json(
+        { error: 'OPENAI_API_KEY is not set' },
+        { status: 500 }
+      );
+    }
+
+    console.log(`Processing application ID: ${applicationId}`);
+    
     const supabase = createServerClient();
+    console.log('Supabase client created');
 
     // Find the application by ID
+    console.log(`Fetching application with ID: ${applicationId}`);
     const { data: existingApp, error: fetchError } = await supabase
       .from('vendor_applications')
       .select('*')
@@ -41,11 +64,16 @@ export async function POST(request: Request) {
       );
     }
 
+    console.log(`Found application: ${existingApp.business_name}`);
+
     let decision: 'approved' | 'rejected' | 'pending' = 'pending';
     let review = '';
     let automated = true;
 
     try {
+      console.log('Sending request to OpenAI...');
+      console.log(`Using model: gpt-3.5-turbo with API key: ${process.env.OPENAI_API_KEY ? 'present' : 'missing'}`);
+      
       const completion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
@@ -83,24 +111,40 @@ Provide your decision and detailed explanation.`
         max_tokens: 500
       });
 
+      console.log('OpenAI response received');
+      
       const content = completion.choices[0]?.message?.content;
       if (content) {
+        console.log('Content received from OpenAI:', content.substring(0, 100) + '...');
         review = content;
         // Look specifically for the DECISION: prefix
         if (content.includes('DECISION: APPROVED')) {
           decision = 'approved';
+          console.log('Decision: APPROVED');
         } else if (content.includes('DECISION: DENIED')) {
           decision = 'rejected';
+          console.log('Decision: DENIED');
+        } else {
+          console.log('Decision not found in response, defaulting to PENDING');
         }
+      } else {
+        console.error('No content received from OpenAI');
       }
     } catch (error: any) {
       console.error('OpenAI API Error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        status: error.status
+      });
       automated = false;
       decision = 'pending';
       review = '[AUTOMATED RESPONSE] An error occurred during the automated review process. This application has been marked as pending for manual review.';
     }
 
     // Update the existing application
+    console.log(`Updating application status to: ${decision}`);
     const { error: updateError } = await supabase
       .from('vendor_applications')
       .update({
@@ -114,6 +158,8 @@ Provide your decision and detailed explanation.`
       throw updateError;
     }
 
+    console.log('Application updated successfully');
+    
     // If approved, trigger the Stripe invoice process
     if (decision === 'approved') {
       try {
@@ -139,12 +185,17 @@ Provide your decision and detailed explanation.`
 
         if (!response.ok) {
           console.error('Stripe invoice response error:', response.status);
+          const responseText = await response.text();
+          console.error('Response body:', responseText);
+        } else {
+          console.log('Stripe invoice sent successfully');
         }
       } catch (stripeError) {
         console.error('Failed to send Stripe invoice:', stripeError);
       }
     }
 
+    console.log('Returning success response');
     return NextResponse.json({
       success: true,
       applicationId: existingApp.id,
@@ -155,6 +206,11 @@ Provide your decision and detailed explanation.`
 
   } catch (error: any) {
     console.error('Error in reviewVendor route:', error);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }
