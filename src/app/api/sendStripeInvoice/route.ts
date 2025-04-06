@@ -131,7 +131,7 @@ export async function POST(request: Request) {
     console.log('Creating account setup link...');
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
-      refresh_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/vendor-dashboard?refresh=true`,
+      refresh_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/refreshStripeLink?accountId=${account.id}`,
       return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/vendor-apply-complete?success=true`,
       type: 'account_onboarding',
     });
@@ -223,13 +223,27 @@ export async function POST(request: Request) {
       // Safely read image files with fallbacks
       const getImageBase64 = (filePath: string) => {
         try {
-          return readPublicFile(filePath).toString('base64');
+          // First try to read the file from the public directory
+          const fileContent = readPublicFile(filePath);
+          console.log(`Successfully read image file: ${filePath}`);
+          return fileContent.toString('base64');
         } catch (err) {
           console.warn(`Could not read image file at ${filePath}:`, err);
           // Return a 1x1 transparent pixel as fallback
           return 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
         }
       };
+      
+      // Create correctly formatted base64 image data
+      const flowHeaderBase64 = getImageBase64('public/Flow-Header.png');
+      const dividerBase64 = getImageBase64('public/Dividier-Padded.png');
+      const onenessBase64 = getImageBase64('public/Oneness_-_light_1.png');
+      
+      console.log('Image loading status:', {
+        flowHeader: flowHeaderBase64.length > 100 ? 'loaded' : 'failed',
+        divider: dividerBase64.length > 100 ? 'loaded' : 'failed',
+        oneness: onenessBase64.length > 100 ? 'loaded' : 'failed'
+      });
       
       const msg = {
         to: email,
@@ -252,21 +266,21 @@ export async function POST(request: Request) {
             filename: 'Flow-Header.png',
             type: 'image/png',
             content_id: 'flow-header',
-            content: getImageBase64('public/Flow-Header.png'),
+            content: flowHeaderBase64,
             disposition: 'inline'
           },
           {
             filename: 'Dividier-Padded.png',
             type: 'image/png', 
             content_id: 'divider-padded',
-            content: getImageBase64('public/Dividier-Padded.png'),
+            content: dividerBase64,
             disposition: 'inline'
           },
           {
             filename: 'Oneness-Light.png',
             type: 'image/png',
             content_id: 'oneness-light',
-            content: getImageBase64('public/Oneness_-_light_1.png'),
+            content: onenessBase64,
             disposition: 'inline'
           }
         ]
