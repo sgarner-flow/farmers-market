@@ -220,10 +220,21 @@ export async function POST(request: Request) {
     try {
       console.log('Preparing to send email...');
       
+      // Safely read image files with fallbacks
+      const getImageBase64 = (filePath: string) => {
+        try {
+          return readPublicFile(filePath).toString('base64');
+        } catch (err) {
+          console.warn(`Could not read image file at ${filePath}:`, err);
+          // Return a 1x1 transparent pixel as fallback
+          return 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+        }
+      };
+      
       const msg = {
         to: email,
         from: {
-          email: 'sgarns@gmail.com',
+          email: process.env.SENDGRID_FROM_EMAIL || 'sgarns@gmail.com',
           name: 'Flow Farmers Market'
         },
         subject: 'Flow Farmers Market - Complete Your Vendor Application',
@@ -241,21 +252,21 @@ export async function POST(request: Request) {
             filename: 'Flow-Header.png',
             type: 'image/png',
             content_id: 'flow-header',
-            content: readPublicFile('public/Flow-Header.png').toString('base64'),
+            content: getImageBase64('public/Flow-Header.png'),
             disposition: 'inline'
           },
           {
             filename: 'Dividier-Padded.png',
             type: 'image/png', 
             content_id: 'divider-padded',
-            content: readPublicFile('public/Dividier-Padded.png').toString('base64'),
+            content: getImageBase64('public/Dividier-Padded.png'),
             disposition: 'inline'
           },
           {
-            filename: 'Oneness_-_light_1.png',
+            filename: 'Oneness-Light.png',
             type: 'image/png',
             content_id: 'oneness-light',
-            content: readPublicFile('public/Oneness_-_light_1.png').toString('base64'),
+            content: getImageBase64('public/Oneness_-_light_1.png'),
             disposition: 'inline'
           }
         ]

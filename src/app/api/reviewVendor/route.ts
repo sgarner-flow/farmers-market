@@ -37,10 +37,14 @@ export async function POST(request: Request) {
     // Verify OpenAI client is initialized at runtime
     if (!openai) {
       console.error('OPENAI_API_KEY is not set');
-      return NextResponse.json(
-        { error: 'OPENAI_API_KEY is not set' },
-        { status: 500 }
-      );
+      // Instead of returning an error, proceed with a manual review message
+      return NextResponse.json({
+        success: true,
+        applicationId,
+        decision: 'pending',
+        review: '[AUTOMATED RESPONSE] The automated review system is currently unavailable. This application has been marked as pending for manual review.',
+        automated: false
+      });
     }
 
     console.log(`Processing application ID: ${applicationId}`);
@@ -74,7 +78,13 @@ export async function POST(request: Request) {
       console.log('Sending request to OpenAI...');
       console.log(`Using model: gpt-3.5-turbo with API key: ${process.env.OPENAI_API_KEY ? 'present' : 'missing'}`);
       
-      const completion = await openai.chat.completions.create({
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("OpenAI request timed out")), 15000); // 15 seconds
+      });
+      
+      // Race between the OpenAI request and the timeout
+      const completionPromise = openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
           {
@@ -110,6 +120,9 @@ Provide your decision and detailed explanation.`
         ],
         max_tokens: 500
       });
+      
+      // Wait for either the completion or the timeout
+      const completion = await Promise.race([completionPromise, timeoutPromise]) as any;
 
       console.log('OpenAI response received');
       
@@ -135,8 +148,7 @@ Provide your decision and detailed explanation.`
       console.error('Error details:', {
         message: error.message,
         name: error.name,
-        stack: error.stack,
-        status: error.status
+        stack: error.stack
       });
       automated = false;
       decision = 'pending';
@@ -171,27 +183,49 @@ Provide your decision and detailed explanation.`
         
         console.log('Sending Stripe invoice to:', apiUrl);
         
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            email: existingApp.email,
-            business_name: existingApp.business_name,
-            applicationId: existingApp.id
-          })
-        });
+        // Create an AbortController for the fetch request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              email: existingApp.email,
+              business_name: existingApp.business_name,
+              applicationId: existingApp.id
+            }),
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
 
-        if (!response.ok) {
-          console.error('Stripe invoice response error:', response.status);
-          const responseText = await response.text();
-          console.error('Response body:', responseText);
-        } else {
-          console.log('Stripe invoice sent successfully');
+          if (!response.ok) {
+            console.error('Stripe invoice response error:', response.status);
+            let responseText;
+            try {
+              responseText = await response.text();
+            } catch (textError) {
+              responseText = "Could not read response text";
+            }
+            console.error('Response body:', responseText);
+            console.log('Will continue with review process despite Stripe invoice error');
+          } else {
+            console.log('Stripe invoice sent successfully');
+          }
+        } catch (fetchError: any) {
+          console.error('Fetch error when sending Stripe invoice:', fetchError);
+          if (fetchError.name === 'AbortError') {
+            console.log('Stripe invoice request timed out');
+          }
+          console.log('Will continue with review process despite Stripe invoice error');
         }
       } catch (stripeError) {
         console.error('Failed to send Stripe invoice:', stripeError);
+        console.log('Will continue with review process despite Stripe invoice error');
       }
     }
 
