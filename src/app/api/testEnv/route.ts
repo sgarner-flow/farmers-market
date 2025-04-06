@@ -18,7 +18,7 @@ export async function GET() {
       status: 'success',
       message: 'Successfully connected to Supabase and queried mailing_list table'
     };
-  } catch (error) {
+  } catch (error: any) {
     results.supabase = {
       status: 'error',
       message: `Supabase connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -41,7 +41,7 @@ export async function GET() {
       status: 'success',
       message: 'Successfully connected to OpenAI API'
     };
-  } catch (error) {
+  } catch (error: any) {
     results.openai = {
       status: 'error',
       message: `OpenAI API connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -58,7 +58,7 @@ export async function GET() {
       status: 'success',
       message: 'Successfully connected to Stripe API'
     };
-  } catch (error) {
+  } catch (error: any) {
     results.stripe = {
       status: 'error',
       message: `Stripe connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -75,7 +75,7 @@ export async function GET() {
       status: 'success',
       message: 'Successfully connected to Resend API'
     };
-  } catch (error) {
+  } catch (error: any) {
     // Note: Resend API might return 404 for non-existent email IDs, which is still a successful connection
     if (error instanceof Error && error.message.includes('404')) {
       results.resend = {

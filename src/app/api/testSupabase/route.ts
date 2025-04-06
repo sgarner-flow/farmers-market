@@ -13,7 +13,7 @@ export async function GET() {
       message: 'Successfully connected to Supabase and queried mailing_list table',
       timestamp: new Date().toISOString()
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Supabase connection error:', error);
     return NextResponse.json({
       success: false,

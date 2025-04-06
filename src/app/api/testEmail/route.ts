@@ -21,7 +21,7 @@ export async function POST(request: Request) {
       message: 'Test email sent successfully',
       result
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('SendGrid test failed:', {
       error,
       message: error.message,
