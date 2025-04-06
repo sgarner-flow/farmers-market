@@ -9,6 +9,7 @@ const openai = process.env.OPENAI_API_KEY
 
 export async function POST(request: Request) {
   console.log('reviewVendor endpoint called');
+  const requestStartTime = Date.now();
   
   try {
     // Get the applicationId from the request
@@ -77,6 +78,7 @@ export async function POST(request: Request) {
     try {
       console.log('Sending request to OpenAI...');
       console.log(`Using model: gpt-3.5-turbo with API key: ${process.env.OPENAI_API_KEY ? 'present' : 'missing'}`);
+      const openaiStartTime = Date.now();
       
       // Create a timeout promise
       const timeoutPromise = new Promise((_, reject) => {
@@ -123,8 +125,8 @@ Provide your decision and detailed explanation.`
       
       // Wait for either the completion or the timeout
       const completion = await Promise.race([completionPromise, timeoutPromise]) as any;
-
-      console.log('OpenAI response received');
+      const openaiEndTime = Date.now();
+      console.log(`OpenAI response received in ${openaiEndTime - openaiStartTime}ms`);
       
       const content = completion.choices[0]?.message?.content;
       if (content) {
@@ -157,6 +159,7 @@ Provide your decision and detailed explanation.`
 
     // Update the existing application
     console.log(`Updating application status to: ${decision}`);
+    const dbUpdateStartTime = Date.now();
     const { error: updateError } = await supabase
       .from('vendor_applications')
       .update({
@@ -169,9 +172,9 @@ Provide your decision and detailed explanation.`
       console.error('Error updating application:', updateError);
       throw updateError;
     }
+    const dbUpdateEndTime = Date.now();
+    console.log(`Database updated in ${dbUpdateEndTime - dbUpdateStartTime}ms`);
 
-    console.log('Application updated successfully');
-    
     // If approved, trigger the Stripe invoice process
     if (decision === 'approved') {
       try {
@@ -229,6 +232,9 @@ Provide your decision and detailed explanation.`
       }
     }
 
+    const requestEndTime = Date.now();
+    console.log(`reviewVendor endpoint completed in ${requestEndTime - requestStartTime}ms`);
+    
     console.log('Returning success response');
     return NextResponse.json({
       success: true,
