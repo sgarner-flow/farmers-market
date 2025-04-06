@@ -11,9 +11,9 @@ export function createBaseEmailTemplate(options: {
   footerContent?: string;
 }) {
   // Use the getEmailImageUrl function which has special handling for email images
-  const logoUrl = "https://rbreohiwrvcpfznnpumh.supabase.co/storage/v1/object/public/images//Oneness_-_light_1.png";
-  const dividerImageUrl = "https://rbreohiwrvcpfznnpumh.supabase.co/storage/v1/object/public/images//Flow-Header.png"
-  const footerImageUrl = "https://rbreohiwrvcpfznnpumh.supabase.co/storage/v1/object/public/images//Dividier-Padded.png";
+  const logoUrl = "https://rbreohiwrvcpfznnpumh.supabase.co/storage/v1/object/public/images//Flow-Header.png";
+  const dividerImageUrl = "https://rbreohiwrvcpfznnpumh.supabase.co/storage/v1/object/public/images//Dividier-Padded.png";
+  const footerImageUrl = "https://rbreohiwrvcpfznnpumh.supabase.co/storage/v1/object/public/images//Oneness_-_light_1.png";
   
   return `
   <!DOCTYPE html>
