@@ -23,7 +23,7 @@ function VendorApplyCompleteContent() {
     <div className="max-w-4xl mx-auto p-6 py-16">
       <div className="text-center mb-10">
         <Image
-          src="https://flowfarmersmarket.com/Flow-Header.png"
+          src="/Flow-Header.png"
           alt="Flow Farmers Market"
           width={300}
           height={110}

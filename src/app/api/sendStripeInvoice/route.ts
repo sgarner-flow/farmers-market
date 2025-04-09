@@ -9,6 +9,11 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? createStripeClient(process.env.STRIPE_SECRET_KEY)
   : null;
 
+// Initialize SendGrid if API key is available
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
+
 export async function POST(request: Request) {
   try {
     console.log('SendStripeInvoice endpoint called');
@@ -173,12 +178,62 @@ export async function POST(request: Request) {
       await sendEmail({
         to: email,
         subject: 'Flow Farmers Market - Complete Your Vendor Application',
-        html: emailHtml
-      });
-      console.log('Email sent successfully');
+        html: emailHtml,
+        trackingSettings: {
+          clickTracking: {
+            enable: true
+          },
+          openTracking: {
+            enable: true
+          }
+        },
+        attachments: [
+          {
+            filename: 'Flow-Header.png',
+            type: 'image/png',
+            content_id: 'flow-header',
+            content: fs.readFileSync('public/Flow-Header.png').toString('base64'),
+            disposition: 'inline'
+          },
+          {
+            filename: 'Dividier-Padded.png',
+            type: 'image/png', 
+            content_id: 'divider-padded',
+            content: fs.readFileSync('public/Dividier-Padded.png').toString('base64'),
+            disposition: 'inline'
+          },
+          {
+            filename: 'Oneness_-_light_1.png',
+            type: 'image/png',
+            content_id: 'oneness-light',
+            content: fs.readFileSync('public/Oneness_-_light_1.png').toString('base64'),
+            disposition: 'inline'
+          }
+        ]
+      };
+
+      // Send email
+      const result = await sgMail.send(msg);
+      console.log('Email sent successfully:', result);
+
     } catch (emailError: any) {
-      console.error('Error sending email:', emailError);
-      // Continue processing even if email fails
+      console.error('Error sending email:', {
+        message: emailError.message,
+      });
+      // Try sending with basic configuration
+      try {
+        console.log('Attempting simplified email send...');
+        await sgMail.send({
+          to: email,
+          from: 'sgarns@gmail.com', // Simplified sender format
+          subject: 'Flow Farmers Market - Complete Your Vendor Application',
+          html: emailHtml
+        });
+        console.log('Simplified email sent successfully');
+      } catch (retryError) {
+        console.error('Retry also failed:', retryError);
+        // Continue processing even if email fails
+      }
     }
 
     // Update application with Stripe information
