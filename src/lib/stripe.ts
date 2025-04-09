@@ -34,15 +34,36 @@ export async function issueVirtualCard(
   customerId: string,
   cardholderData: CardholderData
 ) {
-  // Create a cardholder if not exists
-  const cardholder = await stripe.issuing.cardholders.create({
+  // Create cardholder parameters
+  const cardholderParams: Stripe.Issuing.CardholderCreateParams = {
     name: cardholderData.name,
     email: cardholderData.email,
     phone_number: cardholderData.phone_number,
     status: 'active',
     type: 'individual',
-    billing: cardholderData.billing,
-  });
+    billing: cardholderData.billing ? {
+      address: {
+        line1: cardholderData.billing.address.line1,
+        line2: cardholderData.billing.address.line2,
+        city: cardholderData.billing.address.city,
+        state: cardholderData.billing.address.state,
+        postal_code: cardholderData.billing.address.postal_code,
+        country: cardholderData.billing.address.country,
+      }
+    } : {
+      // Default billing details when not provided
+      address: {
+        line1: '123 Main St',
+        city: 'Miami',
+        state: 'FL',
+        postal_code: '33132',
+        country: 'US',
+      }
+    }
+  };
+
+  // Create a cardholder if not exists
+  const cardholder = await stripe.issuing.cardholders.create(cardholderParams);
 
   // Create a card for the cardholder
   const card = await stripe.issuing.cards.create({

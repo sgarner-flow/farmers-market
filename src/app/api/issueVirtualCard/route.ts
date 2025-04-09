@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
-import { createStripeClient, issueVirtualCard, CardholderData } from '@/lib/stripe';
+import { createStripeClient, issueVirtualCard, CardholderData } from '../../../lib/stripe';
 import { sendEmail } from '@/lib/email-utils';
 import { createBaseEmailTemplate } from '@/lib/email-templates/base-template';
 
