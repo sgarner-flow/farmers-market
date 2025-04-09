@@ -42,7 +42,7 @@ def vendor_recommendations():
         location = data['location']
         
         # Create a query based on location
-        query = f"Recommend real vendors for {location} farmers market who might be interested in joining. Include their name, email, and website if known."
+        query = f"Can you suggest vendors in {location} that would make good additions to Flow's farmers market based on our standards? Provide some URL and contact information for those you suggest."
         
         # Search for relevant content
         results = vendor_recommender.search(query, num_results=5)
