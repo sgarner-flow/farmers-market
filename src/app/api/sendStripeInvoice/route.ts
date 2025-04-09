@@ -1,8 +1,27 @@
+// TypeScript types for Next.js 13+ App Router
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { createStripeClient } from '@/lib/stripe';
-import { sendEmail } from '@/lib/email-utils';
 import { createBaseEmailTemplate } from '@/lib/email-templates/base-template';
+
+// Import SendGrid
+let sgMail: any = null;
+// We'll import dynamically at runtime to avoid build errors
+if (typeof window === 'undefined') { // Only import on server-side
+  sgMail = require('@sendgrid/mail');
+}
+
+// Declare process type
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv {
+      STRIPE_SECRET_KEY?: string;
+      SENDGRID_API_KEY?: string;
+      NEXT_PUBLIC_APP_URL?: string;
+      [key: string]: string | undefined;
+    }
+  }
+}
 
 // Check for API keys - don't throw during build time
 const stripe = process.env.STRIPE_SECRET_KEY 
@@ -10,7 +29,7 @@ const stripe = process.env.STRIPE_SECRET_KEY
   : null;
 
 // Initialize SendGrid if API key is available
-if (process.env.SENDGRID_API_KEY) {
+if (process.env.SENDGRID_API_KEY && sgMail) {
   sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 }
 
@@ -38,9 +57,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!process.env.SENDGRID_API_KEY) {
+    if (!process.env.SENDGRID_API_KEY || !sgMail) {
       return NextResponse.json(
-        { error: 'SENDGRID_API_KEY is not set' },
+        { error: 'SENDGRID_API_KEY is not set or SendGrid module not loaded' },
         { status: 500 }
       );
     }
@@ -172,45 +191,19 @@ export async function POST(request: Request) {
       `
     });
 
-    // Send the email using our utility function
+    // Send the email using SendGrid
     try {
       console.log('Sending email...');
-      await sendEmail({
+      // Create email message
+      const msg = {
         to: email,
-        subject: 'Flow Farmers Market - Complete Your Vendor Application',
-        html: emailHtml,
-        trackingSettings: {
-          clickTracking: {
-            enable: true
-          },
-          openTracking: {
-            enable: true
-          }
+        from: {
+          email: 'sgarns@gmail.com',
+          name: 'Flow Farmers Market'
         },
-        attachments: [
-          {
-            filename: 'Flow-Header.png',
-            type: 'image/png',
-            content_id: 'flow-header',
-            content: fs.readFileSync('public/Flow-Header.png').toString('base64'),
-            disposition: 'inline'
-          },
-          {
-            filename: 'Dividier-Padded.png',
-            type: 'image/png', 
-            content_id: 'divider-padded',
-            content: fs.readFileSync('public/Dividier-Padded.png').toString('base64'),
-            disposition: 'inline'
-          },
-          {
-            filename: 'Oneness_-_light_1.png',
-            type: 'image/png',
-            content_id: 'oneness-light',
-            content: fs.readFileSync('public/Oneness_-_light_1.png').toString('base64'),
-            disposition: 'inline'
-          }
-        ]
-      };
+        subject: 'Flow Farmers Market - Complete Your Vendor Application',
+        html: emailHtml
+      }
 
       // Send email
       const result = await sgMail.send(msg);
