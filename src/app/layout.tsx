@@ -39,6 +39,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <header className="bg-[#F3EDDF] text-gray-800 shadow">
+            {/* Existing header content */}
+          </header>
           {children}
           <Toaster />
         </ThemeProvider>

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { createStripeClient } from '@/lib/stripe';
-import sgMail from '@sendgrid/mail';
-import fs from 'fs';
+import { sendEmail } from '@/lib/email-utils';
+import { createBaseEmailTemplate } from '@/lib/email-templates/base-template';
 
 // Check for API keys - don't throw during build time
 const stripe = process.env.STRIPE_SECRET_KEY 
@@ -130,101 +130,53 @@ export async function POST(request: Request) {
     console.log('Creating account setup link...');
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
-      refresh_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/vendor-dashboard?refresh=true`,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/vendor-apply-complete?success=true`,
+      refresh_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://flowfarmersmarket.vercel.app'}/api/refreshStripeLink?accountId=${account.id}`,
+      return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://flowfarmersmarket.vercel.app'}/vendor-apply-complete?success=true`,
       type: 'account_onboarding',
     });
 
-    // Prepare and send email with the correct links
-    const emailHtml = `
-    <!DOCTYPE html>
-    <html lang="en-US">
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Welcome to Flow Farmers Market</title>
-    </head>
-    <body style="margin: 0; padding: 0; background-color: #F6EEDD; font-family: Arial, Helvetica, sans-serif; color: #4A4A4A; line-height: 1.6;">
-      <!-- Main container -->
-      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F6EEDD;">
-        <tr>
-          <td align="center" style="padding: 20px 0;">
-            <!-- Email content container -->
-            <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #F6EEDD; max-width: 600px; margin: 0 auto;">
-              <!-- Header section with logo -->
-              <tr>
-                <td align="center" style="padding: 20px 0;">
-                  <!-- Flow logo image -->
-                  <div style="max-width: 250px; margin: 0 auto;">
-                    <img src="cid:flow-header" alt="Flow Farmers Market" style="display: block; width: 100%; max-width: 250px; height: auto;">
-                  </div>
-                </td>
-              </tr>
-              
-              <!-- Content section -->
-              <tr>
-                <td style="padding: 20px; background-color: #F6EEDD;">
-                  <h1 style="color: #71725E; font-size: 24px; margin-bottom: 20px; font-weight: bold;">Welcome to Flow Farmers Market!</h1>
-                  <p style="margin-bottom: 16px;">Dear ${business_name},</p>
-                  <p style="margin-bottom: 16px;">Your vendor application has been approved! Please complete these two important steps to finalize your application:</p>
-                  
-                  <div style="background-color: #FFFFFF; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-                    <h2 style="color: #71725E; font-size: 18px; margin-top: 5px; margin-bottom: 15px; font-weight: bold;">Step 1: Pay Your Application Fee</h2>
-                    <p style="margin-bottom: 15px;">Please click the button below to view and pay your vendor application fee.</p>
-                    <div style="text-align: center; margin: 20px 0;">
-                      <a href="${finalInvoice.hosted_invoice_url}" style="display: inline-block; background-color: #71725E; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">View & Pay Invoice</a>
-                    </div>
-                  </div>
-                  
-                  <div style="background-color: #FFFFFF; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-                    <h2 style="color: #71725E; font-size: 18px; margin-top: 5px; margin-bottom: 15px; font-weight: bold;">Step 2: Set Up Your Payment Processing</h2>
-                    <p style="margin-bottom: 15px;">After paying your application fee, please set up your Stripe account to be able to accept payments at the market.</p>
-                    <div style="text-align: center; margin: 20px 0;">
-                      <a href="${accountLink.url}" style="display: inline-block; background-color: #71725E; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Set Up Stripe Account</a>
-                    </div>
-                  </div>
-                  
-                  <p style="margin-bottom: 16px;">If you have any questions or need assistance, please contact us at <a href="mailto:sgarns@gmail.com" style="color: #4A8233; text-decoration: underline;">sgarns@gmail.com</a>.</p>
-                  
-                  <div style="text-align: center; padding: 20px 0;">
-                    <!-- Divider image -->
-                    <div style="max-width: 96px; margin: 0 auto;">
-                      <img src="cid:divider-padded" alt="Divider" style="display: block; width: 100%; max-width: 96px; height: auto;">
-                    </div>
-                  </div>
-                </td>
-              </tr>
-              
-              <!-- Footer section -->
-              <tr>
-                <td style="padding: 20px; text-align: center; color: #666666; font-size: 12px; border-top: 1px solid #DDD;">
-                  <!-- Footer image -->
-                  <div style="max-width: 150px; margin: 0 auto 15px auto;">
-                    <img src="cid:oneness-light" alt="Flow Farmers Market Footer" style="display: block; width: 100%; max-width: 150px; height: auto;">
-                  </div>
-                  <p style="margin-bottom: 8px;">Best regards,<br>Flow Farmers Market Team</p>
-                  <p style="margin-bottom: 8px;">© ${new Date().getFullYear()} Flow Farmers Market. All rights reserved.</p>
-                  <p style="margin-bottom: 0;">698 NE 1st Avenue, Miami, FL 33132</p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>
+    // Create the email content
+    const emailMainContent = `
+      <h1 style="color: #71725E; font-size: 24px; margin-bottom: 20px; font-weight: bold;">Welcome to Flow Farmers Market!</h1>
+      <p style="margin-bottom: 16px;">Dear ${business_name},</p>
+      <p style="margin-bottom: 16px;">Your vendor application has been approved! Please complete these two important steps to finalize your application:</p>
+      
+      <div style="background-color: #FFFFFF; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <h2 style="color: #71725E; font-size: 18px; margin-top: 5px; margin-bottom: 15px; font-weight: bold;">Step 1: Pay Your Application Fee</h2>
+        <p style="margin-bottom: 15px;">Please click the button below to view and pay your vendor application fee.</p>
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${finalInvoice.hosted_invoice_url}" style="display: inline-block; background-color: #71725E; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">View & Pay Invoice</a>
+        </div>
+      </div>
+      
+      <div style="background-color: #FFFFFF; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <h2 style="color: #71725E; font-size: 18px; margin-top: 5px; margin-bottom: 15px; font-weight: bold;">Step 2: Set Up Your Payment Processing</h2>
+        <p style="margin-bottom: 15px;">After paying your application fee, please set up your Stripe account to be able to accept payments at the market.</p>
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${accountLink.url}" style="display: inline-block; background-color: #71725E; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Set Up Stripe Account</a>
+        </div>
+      </div>
+      
+      <p style="margin-bottom: 16px;">If you have any questions or need assistance, please contact us at <a href="mailto:sgarns@gmail.com" style="color: #4A8233; text-decoration: underline;">sgarns@gmail.com</a>.</p>
     `;
 
-    // Updated email sending section
+    // Generate the complete email HTML using our base template
+    const emailHtml = createBaseEmailTemplate({
+      title: 'Welcome to Flow Farmers Market',
+      previewText: 'Complete your vendor application for Flow Farmers Market',
+      mainContent: emailMainContent,
+      footerContent: `
+        <p style="margin-bottom: 8px;">Best regards,<br>Flow Farmers Market Team</p>
+        <p style="margin-bottom: 8px;">© ${new Date().getFullYear()} Flow Farmers Market. All rights reserved.</p>
+        <p style="margin-bottom: 0;">698 NE 1st Avenue, Miami, FL 33132</p>
+      `
+    });
+
+    // Send the email using our utility function
     try {
-      console.log('Preparing to send email...');
-      
-      const msg = {
+      console.log('Sending email...');
+      await sendEmail({
         to: email,
-        from: {
-          email: 'sgarns@gmail.com',
-          name: 'Flow Farmers Market'
-        },
         subject: 'Flow Farmers Market - Complete Your Vendor Application',
         html: emailHtml,
         trackingSettings: {

@@ -96,6 +96,7 @@ export default function AdminLayout({
     { href: '/admin', label: 'Dashboard' },
     { href: '/admin/vendors', label: 'Vendors' },
     { href: '/admin/mailing-list', label: 'Mailing List' },
+    { href: '/vendor-dashboard/payments', label: 'Payments' },
   ];
 
   return (

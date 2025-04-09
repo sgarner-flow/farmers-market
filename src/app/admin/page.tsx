@@ -98,6 +98,12 @@ export default function AdminDashboard() {
             >
               View Vendor Portal
             </Link>
+            <Link 
+              href="/vendor-dashboard/payments" 
+              className="block w-full py-2 px-3 bg-market-green text-white rounded-md text-center hover:bg-market-olive transition-colors"
+            >
+              View Payments Dashboard
+            </Link>
           </div>
         </div>
       </div>

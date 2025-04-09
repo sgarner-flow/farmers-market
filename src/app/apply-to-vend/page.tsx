@@ -60,24 +60,47 @@ export default function ApplyToVend() {
 
       if (error) throw error;
 
-      // Then trigger the AI review
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
-      const reviewResponse = await fetch(`${baseUrl}/api/reviewVendor`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          applicationId: application.id
-        }),
-      });
-
-      if (!reviewResponse.ok) {
-        throw new Error('Failed to trigger AI review');
-      }
-
+      // Successfully added to database - show success immediately
       setSubmitStatus('success');
       reset();
+
+      try {
+        // Prepare the base URL - default to relative path if not specified
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ? 
+          process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '') : ''; // Remove trailing slash if present
+        
+        // Create an AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        // Then trigger the AI review - use relative path if no base URL
+        const reviewResponse = await fetch(`${baseUrl}/api/reviewVendor`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            applicationId: application.id
+          }),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+
+        if (!reviewResponse.ok) {
+          console.warn('AI review request was not successful:', reviewResponse.status, reviewResponse.statusText);
+          // Continue execution - this is not critical for the user
+        } else {
+          console.log('AI review request successful');
+        }
+      } catch (reviewError: any) {
+        // Log the error but don't fail the submission
+        console.error('Error triggering AI review:', reviewError);
+        if (reviewError.name === 'AbortError') {
+          console.log('AI review request timed out - will be processed asynchronously');
+        }
+        // Not showing this error to the user as it's a background process
+      }
     } catch (error) {
       console.error('Error submitting application:', error);
       setSubmitStatus('error');

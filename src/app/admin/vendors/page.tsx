@@ -6,6 +6,12 @@ import { Database } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
+interface Vendor {
+  name?: string;
+  email: string;
+  description?: string;
+}
+
 type VendorApplication = Database['public']['Tables']['vendor_applications']['Row'];
 
 export default function AdminVendors() {
@@ -21,11 +27,26 @@ export default function AdminVendors() {
   const [sendingBulletin, setSendingBulletin] = useState(false);
   const [bulletinMessage, setBulletinMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadedVendors, setUploadedVendors] = useState<Array<{name?: string, email: string}>>([]);
   const [isSending, setIsSending] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedVendors, setUploadedVendors] = useState<Vendor[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState('Miami');
+  const [isGettingRecommendations, setIsGettingRecommendations] = useState(false);
+  const [recommendationResponse, setRecommendationResponse] = useState('');
+  const [hasRecommendations, setHasRecommendations] = useState(false);
+  const [aiProcessingInfo, setAiProcessingInfo] = useState('');
   const supabase = createClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Market locations
+  const marketLocations = [
+    'Miami',
+    'Fort Lauderdale',
+    'Brickell',
+    'Aventura',
+    'El Portal',
+    'Granada'
+  ];
 
   useEffect(() => {
     fetchVendors();
@@ -190,21 +211,78 @@ export default function AdminVendors() {
     reader.readAsText(file);
   };
 
+  const getVendorRecommendations = async () => {
+    // Validate
+    if (!selectedLocation) {
+      toast.error('Please select a market location');
+      return;
+    }
+    
+    // Start loading
+    setIsGettingRecommendations(true);
+    // Clear previous data
+    setRecommendationResponse('');
+    setUploadedVendors([]);
+    setHasRecommendations(false);
+    setAiProcessingInfo('');
+    
+    try {
+      // Call the API endpoint
+      const response = await fetch('/api/getVendorRecommendations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ location: selectedLocation }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to get recommendations');
+      }
+      
+      const data = await response.json();
+      
+      if (data.success === false) {
+        throw new Error(data.error || 'Error getting recommendations');
+      }
+      
+      // Store the AI response text
+      setRecommendationResponse(data.response);
+      
+      // Store AI processing info if available
+      if (data.aiProcessing) {
+        setAiProcessingInfo(data.aiProcessing);
+      }
+      
+      // Don't add vendors to the table from AI recommendations
+      setHasRecommendations(true);
+      toast.success(`Got recommendations for ${selectedLocation}. Upload a file with emails to invite vendors.`);
+    } catch (error) {
+      console.error('Error fetching recommendations:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to get recommendations');
+    } finally {
+      setIsGettingRecommendations(false);
+    }
+  };
+
   const sendInvitations = async () => {
-    if (uploadedVendors.length === 0) {
-      toast.error('No vendors to invite');
+    // Check if we have any vendors with valid emails
+    const vendorsWithEmails = uploadedVendors.filter(vendor => vendor.email);
+    
+    if (vendorsWithEmails.length === 0) {
+      toast.error('No vendors with valid email addresses to invite');
       return;
     }
     
     setIsSending(true);
     
     try {
-      const response = await fetch('/api/sendVendorInvitation', {
+      const response = await fetch('/api/sendInvitations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ vendors: uploadedVendors }),
+        body: JSON.stringify({ vendors: vendorsWithEmails }),
       });
       
       const data = await response.json();
@@ -213,9 +291,11 @@ export default function AdminVendors() {
         throw new Error(data.error || 'Failed to send invitations');
       }
       
-      toast.success(data.message || 'Invitations sent successfully');
+      toast.success(`Successfully sent invitations to ${vendorsWithEmails.length} vendors`);
       setShowInviteModal(false);
       setUploadedVendors([]);
+      setRecommendationResponse('');
+      setHasRecommendations(false);
       
       // Refresh vendor data
       if (fetchVendors) {
@@ -599,17 +679,43 @@ export default function AdminVendors() {
 
       {/* Invite New Vendors Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-hidden">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Invite New Vendors</h3>
               
-              <div className="mb-4">
-                <p className="text-sm text-gray-600 mb-2">
-                  Upload a text file with one vendor per line in format: <code>email,name</code> (name is optional)
-                </p>
-                
-                <div className="border-2 border-dashed border-gray-300 rounded-md p-6 text-center">
+              <div className="mb-6">
+                <h4 className="text-md font-medium text-gray-700 mb-2">Find Vendors with AI</h4>
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Select Market Location
+                    </label>
+                    <select
+                      value={selectedLocation}
+                      onChange={(e) => setSelectedLocation(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-market-green focus:border-market-green"
+                    >
+                      {marketLocations.map((location) => (
+                        <option key={location} value={location}>{location}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <button
+                    onClick={getVendorRecommendations}
+                    disabled={isGettingRecommendations}
+                    className="w-full px-4 py-2 bg-market-green text-white rounded-md hover:bg-market-green/90 disabled:opacity-50"
+                  >
+                    {isGettingRecommendations ? 'Finding Vendors...' : 'Get Vendor Recommendations'}
+                  </button>
+                </div>
+              </div>
+              
+              {/* Manual Input Option */}
+              <div className="mb-6">
+                <h4 className="text-md font-medium text-gray-700 mb-2">Upload Vendor List with Emails</h4>
+                <div className="border-2 border-dashed border-gray-300 rounded-md p-4 text-center">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -620,41 +726,96 @@ export default function AdminVendors() {
                   
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="px-4 py-2 bg-market-green text-white rounded-md hover:bg-market-green/90 disabled:opacity-50"
+                    disabled={isUploading || isGettingRecommendations}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 disabled:opacity-50"
                   >
                     {isUploading ? 'Processing...' : 'Select File'}
                   </button>
-                  
-                  {uploadedVendors.length > 0 && (
-                    <div className="mt-4 text-left">
-                      <p className="font-medium text-gray-700">
-                        {uploadedVendors.length} vendor{uploadedVendors.length !== 1 ? 's' : ''} loaded
-                      </p>
-                      <div className="mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-md p-2">
-                        <ul className="space-y-1 text-sm">
-                          {uploadedVendors.slice(0, 10).map((vendor, index) => (
-                            <li key={index} className="text-gray-600">
-                              {vendor.email} {vendor.name ? `(${vendor.name})` : ''}
-                            </li>
-                          ))}
-                          {uploadedVendors.length > 10 && (
-                            <li className="text-gray-500 italic">
-                              ...and {uploadedVendors.length - 10} more
-                            </li>
-                          )}
-                        </ul>
-                      </div>
-                    </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Format: one vendor per line as <code>email,name</code>
+                  </p>
+                  {hasRecommendations && uploadedVendors.length === 0 && (
+                    <p className="mt-3 text-amber-600 text-xs font-medium">
+                      To invite vendors from the AI recommendations, upload a file with their email addresses.
+                    </p>
                   )}
                 </div>
               </div>
+
+              {/* AI Response Display */}
+              {recommendationResponse && (
+                <div className="mb-6">
+                  <h4 className="text-md font-medium text-gray-700 mb-2">AI Recommendations</h4>
+                  <div className="bg-gray-50 rounded-md p-4 max-h-80 overflow-y-auto">
+                    <p className="text-sm whitespace-pre-wrap">{recommendationResponse}</p>
+                  </div>
+                  
+                  {aiProcessingInfo && (
+                    <div className="mt-2 bg-blue-50 rounded-md p-3 border border-blue-200">
+                      <p className="text-xs text-blue-800">
+                        <span className="font-medium">AI Processing:</span> {aiProcessingInfo}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Vendor List Display */}
+              {uploadedVendors.length > 0 && (
+                <div className="mb-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="text-md font-medium text-gray-700">
+                      Vendors to Invite ({uploadedVendors.length})
+                    </h4>
+                    <button
+                      onClick={() => setUploadedVendors([])}
+                      className="text-xs text-red-600 hover:text-red-800"
+                    >
+                      Clear List
+                    </button>
+                  </div>
+                  <div className="border border-gray-200 rounded-md max-h-60 overflow-y-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50 sticky top-0">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {uploadedVendors.map((vendor, index) => (
+                          <tr key={index}>
+                            <td className="px-4 py-2 text-sm text-gray-700">{vendor.name || 'Unknown'}</td>
+                            <td className="px-4 py-2 text-sm text-gray-700">
+                              {vendor.email ? vendor.email : (
+                                <span className="text-amber-600 text-xs">No email - upload file with emails to invite vendors</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2 text-xs">
+                              {vendor.description === 'Found with AI' ? (
+                                <span className="text-green-600">{vendor.description}</span>
+                              ) : vendor.description === 'AI-generated email' ? (
+                                <span className="text-amber-600">{vendor.description}</span>
+                              ) : (
+                                <span className="text-gray-500">{vendor.description}</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
               
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => {
                     setShowInviteModal(false);
                     setUploadedVendors([]);
+                    setRecommendationResponse('');
+                    setHasRecommendations(false);
                   }}
                   className="px-4 py-2 text-gray-700 rounded-md hover:bg-gray-100"
                 >
@@ -663,7 +824,7 @@ export default function AdminVendors() {
                 
                 <button
                   onClick={sendInvitations}
-                  disabled={uploadedVendors.length === 0 || isSending}
+                  disabled={!uploadedVendors.some(v => v.email) || isSending}
                   className="px-4 py-2 bg-market-olive text-white rounded-md hover:bg-market-olive/90 disabled:opacity-50"
                 >
                   {isSending ? 'Sending...' : 'Send Invitations'}
