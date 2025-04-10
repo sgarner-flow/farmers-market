@@ -226,73 +226,73 @@ export default function AdminVendors() {
     setHasRecommendations(false);
     setAiProcessingInfo('');
     
-    // Set up a timeout promise
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Request timed out after 60 seconds. This is a long operation on our servers.')), 60000);
-    });
+    // Show immediate feedback to user
+    toast.info('Fetching vendor recommendations... This may take up to a minute.');
     
-    try {
-      // Show immediate feedback to user
-      toast.info('Fetching vendor recommendations... This may take up to a minute.');
-      
-      // Call the API endpoint with fetch timeout
-      const fetchPromise = fetch('/api/getVendorRecommendations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ location: selectedLocation }),
-      });
-      
-      // Race the fetch against the timeout
-      const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
-      
-      if (!response.ok) {
-        if (response.status === 504) {
-          throw new Error('The request timed out. The OpenAI service may be busy. Please try again in a moment.');
+    let retryCount = 0;
+    const maxRetries = 2;
+    const fetchWithRetry = async () => {
+      try {
+        // Set up a timeout promise
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 65000); // 65 second timeout, slightly longer than server
+        
+        // Call the API endpoint with fetch timeout
+        const response = await fetch('/api/getVendorRecommendations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ location: selectedLocation }),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          if (response.status === 504 || response.status === 408) {
+            throw new Error('The request timed out. The OpenAI service may be busy. Please try again in a moment.');
+          }
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
+        
+        const data = await response.json();
+        
+        if (data.success === false) {
+          throw new Error(data.error || 'Error getting recommendations');
+        }
+        
+        // Store the AI response text
+        setRecommendationResponse(data.response);
+        
+        // Store AI processing info if available
+        if (data.aiProcessingInfo) {
+          setAiProcessingInfo(data.aiProcessingInfo);
+        }
+        
+        // Store vendor data for the form
+        if (data.vendors && Array.isArray(data.vendors)) {
+          setUploadedVendors(data.vendors);
+          setHasRecommendations(true);
+        }
+        
+        toast.success('Vendor recommendations generated successfully!');
+      } catch (error: any) {
+        console.error('Error getting vendor recommendations:', error);
+        if ((error.name === 'AbortError' || error.message.includes('timeout') || error.message.includes('timed out')) && retryCount < maxRetries) {
+          retryCount++;
+          toast.warning(`Request timed out. Retrying (${retryCount}/${maxRetries})...`);
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retrying
+          return fetchWithRetry();
+        }
+        
+        toast.error(error.message || 'Failed to get vendor recommendations');
+      } finally {
+        setIsGettingRecommendations(false);
       }
-      
-      const data = await response.json();
-      
-      if (data.success === false) {
-        throw new Error(data.error || 'Error getting recommendations');
-      }
-      
-      // Store the AI response text
-      setRecommendationResponse(data.response);
-      
-      // Store AI processing info if available
-      if (data.aiProcessingInfo) {
-        setAiProcessingInfo(data.aiProcessingInfo);
-      }
-      
-      // Add vendors to the table from the structured data
-      if (data.vendors && Array.isArray(data.vendors) && data.vendors.length > 0) {
-        setUploadedVendors(data.vendors.map((vendor: { name: string; email: string }) => ({
-          name: vendor.name || '',
-          email: vendor.email || '',
-          description: 'Found with AI'
-        })));
-      }
-      
-      setHasRecommendations(true);
-      toast.success(`Got recommendations for ${selectedLocation} with ${data.vendors?.length || 0} vendors. Review and click Send Invitations to proceed.`);
-    } catch (error) {
-      console.error('Error fetching recommendations:', error);
-      
-      // More specific error messages based on the type of error
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        toast.error('Network error: Please check your connection and try again');
-      } else if (error instanceof Error && error.message.includes('timed out')) {
-        toast.error('The request timed out. This operation is resource-intensive and may take longer on our servers. Please try again.');
-      } else {
-        toast.error(error instanceof Error ? error.message : 'Failed to get recommendations');
-      }
-    } finally {
-      setIsGettingRecommendations(false);
-    }
+    };
+    
+    await fetchWithRetry();
   };
 
   const sendInvitations = async () => {
