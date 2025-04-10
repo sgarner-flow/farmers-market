@@ -7,5 +7,10 @@
   "regions": ["sfo1"],
   "env": {
     "NEXT_PUBLIC_APP_URL": "https://flowfarmersmarket.vercel.app"
+  },
+  "functions": {
+    "src/app/api/getVendorRecommendations/route.ts": {
+      "maxDuration": 60
+    }
   }
 } 

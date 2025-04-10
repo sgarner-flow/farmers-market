@@ -226,9 +226,17 @@ export default function AdminVendors() {
     setHasRecommendations(false);
     setAiProcessingInfo('');
     
+    // Set up a timeout promise
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Request timed out after 60 seconds. This is a long operation on our servers.')), 60000);
+    });
+    
     try {
-      // Call the API endpoint
-      const response = await fetch('/api/getVendorRecommendations', {
+      // Show immediate feedback to user
+      toast.info('Fetching vendor recommendations... This may take up to a minute.');
+      
+      // Call the API endpoint with fetch timeout
+      const fetchPromise = fetch('/api/getVendorRecommendations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -236,8 +244,14 @@ export default function AdminVendors() {
         body: JSON.stringify({ location: selectedLocation }),
       });
       
+      // Race the fetch against the timeout
+      const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+      
       if (!response.ok) {
-        throw new Error('Failed to get recommendations');
+        if (response.status === 504) {
+          throw new Error('The request timed out. The OpenAI service may be busy. Please try again in a moment.');
+        }
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
       
       const data = await response.json();
@@ -250,8 +264,8 @@ export default function AdminVendors() {
       setRecommendationResponse(data.response);
       
       // Store AI processing info if available
-      if (data.aiProcessing) {
-        setAiProcessingInfo(data.aiProcessing);
+      if (data.aiProcessingInfo) {
+        setAiProcessingInfo(data.aiProcessingInfo);
       }
       
       // Add vendors to the table from the structured data
@@ -259,7 +273,7 @@ export default function AdminVendors() {
         setUploadedVendors(data.vendors.map((vendor: { name: string; email: string }) => ({
           name: vendor.name || '',
           email: vendor.email || '',
-          description: ''
+          description: 'Found with AI'
         })));
       }
       
@@ -267,7 +281,15 @@ export default function AdminVendors() {
       toast.success(`Got recommendations for ${selectedLocation} with ${data.vendors?.length || 0} vendors. Review and click Send Invitations to proceed.`);
     } catch (error) {
       console.error('Error fetching recommendations:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to get recommendations');
+      
+      // More specific error messages based on the type of error
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        toast.error('Network error: Please check your connection and try again');
+      } else if (error instanceof Error && error.message.includes('timed out')) {
+        toast.error('The request timed out. This operation is resource-intensive and may take longer on our servers. Please try again.');
+      } else {
+        toast.error(error instanceof Error ? error.message : 'Failed to get recommendations');
+      }
     } finally {
       setIsGettingRecommendations(false);
     }

@@ -37,6 +37,8 @@ export async function POST(request: Request) {
     
     const openai = new OpenAI({
       apiKey: openaiApiKey,
+      maxRetries: 2, // Limit retries to avoid hanging too long
+      timeout: 55000, // 55 second timeout in ms
     });
 
     // Updated prompt with stronger exclusion for Zak the Baker and better formatting guidelines
@@ -64,38 +66,65 @@ Format the response as a numbered list with each vendor's information clearly or
    - **Website**: [Vendor Name](https://website.com)
    - **Email**: example@vendor.com`;
 
-    // Call OpenAI directly
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
-      messages: [
-        {
-          role: "system", 
-          content: `You are an expert in local ${location}-area vendors, especially those that would be a good fit for an upscale farmers market. Provide accurate information about real vendors including their contact information if available. Format your response so each vendor listing is clear and separated, with their name, reason for selection, and contact information easily distinguishable.`
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 2000,
-    });
+    try {
+      // Call OpenAI with optimized parameters
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o", // Use GPT-4o which is generally faster than turbo-preview
+        messages: [
+          {
+            role: "system", 
+            content: `You are an expert in local ${location}-area vendors, especially those that would be a good fit for an upscale farmers market. Provide accurate information about real vendors including their contact information if available. Format your response so each vendor listing is clear and separated, with their name, reason for selection, and contact information easily distinguishable.`
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.5, // Lower temperature for faster, more deterministic responses
+        max_tokens: 2000,
+      });
 
-    const aiResponse = completion.choices[0]?.message?.content || '';
+      const aiResponse = completion.choices[0]?.message?.content || '';
 
-    // Extract vendor information to allow for easy form filling
-    const vendors = extractVendorsFromResponse(aiResponse);
+      // Extract vendor information to allow for easy form filling
+      const vendors = extractVendorsFromResponse(aiResponse);
 
-    return NextResponse.json({
-      success: true,
-      response: aiResponse,
-      vendors: vendors,
-      aiProcessingInfo: "Vendor recommendations provided directly from OpenAI. Only highly confident email addresses are included. For vendors without emails, please upload a file with accurate email addresses to send invitations."
-    });
-  } catch (error) {
+      return NextResponse.json({
+        success: true,
+        response: aiResponse,
+        vendors: vendors,
+        aiProcessingInfo: "Vendor recommendations provided directly from OpenAI. Only highly confident email addresses are included. For vendors without emails, please upload a file with accurate email addresses to send invitations."
+      });
+    } catch (error: any) {
+      console.error('Error calling OpenAI in getVendorRecommendations:', error);
+      
+      // Handle different types of OpenAI errors
+      if (error.status === 429) {
+        return NextResponse.json(
+          { error: 'OpenAI rate limit exceeded. Please try again in a few moments.' },
+          { status: 429 }
+        );
+      } else if (error.type === 'timeout') {
+        return NextResponse.json(
+          { error: 'Request to OpenAI timed out. The service might be experiencing high demand.' },
+          { status: 408 }
+        );
+      } else if (error.type === 'server_error') {
+        return NextResponse.json(
+          { error: 'OpenAI server error. Please try again later.' },
+          { status: 503 }
+        );
+      }
+      
+      return NextResponse.json(
+        { error: 'Error processing vendor recommendations: ' + (error.message || 'Unknown error') },
+        { status: 500 }
+      );
+    }
+  } catch (error: any) {
     console.error('Error in getVendorRecommendations:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error: ' + (error.message || 'Unknown error') },
       { status: 500 }
     );
   }
