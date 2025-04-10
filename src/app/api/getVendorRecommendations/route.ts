@@ -39,19 +39,30 @@ export async function POST(request: Request) {
       apiKey: openaiApiKey,
     });
 
-    // Updated prompt with stronger exclusion for Zak the Baker
+    // Updated prompt with stronger exclusion for Zak the Baker and better formatting guidelines
     const prompt = `Find 4 high-quality artisanal vendors for a farmers market at ${marketAddress}. Focus on sustainability, community, quality, and local engagement.
 
 For each vendor, provide:
-1. The vendor name with a brief explanation of why you're recommending them
-2. Their email address
-3. Website (ONLY if you are more than 80% confident that it exists and is correct - otherwise omit)
+1. The vendor name with a brief explanation of why you're recommending them.
+2. Their website as a proper markdown link like [Vendor Name](https://website.com).
+3. Email address ONLY if you are more than 80% confident it is correct. Prioritize official sources such as:
+   - The vendor's contact page on their official website.
+   - Email addresses listed on their official social media profiles.
+   - Verified business directories with official listings.
 
-DO NOT INCLUDE ANY FICTIONAL VENDORS OR MADE-UP EMAILS. Only include vendors you are confident exist with correct contact information.
+#### Important Guidelines:
+- Double-check the vendor's website and social media for contact information, especially on the **Contact**, **About**, or **Support** pages.
+- Do NOT include "Zak the Baker" or any variation of that name in your recommendations under any circumstances. This vendor must be completely excluded.
+- If an email address cannot be confidently verified as correct, omit it.
+- For emails: DO NOT guess or fabricate. Include only those verified from reliable sources.
+- For websites: Always present them as clickable markdown links.
 
-IMPORTANT REQUIREMENT: DO NOT include "Zak the Baker" or any variation of that name in your recommendations under any circumstances. This vendor must be completely excluded from your results.
+Format the response as a numbered list with each vendor's information clearly organized using markdown formatting.
 
-Format the response as a numbered list with each vendor's information clearly organized using markdown formatting.`;
+#### Example:
+1. **Vendor Name**: A brief description of why they are recommended.
+   - **Website**: [Vendor Name](https://website.com)
+   - **Email**: example@vendor.com`;
 
     // Call OpenAI directly
     const completion = await openai.chat.completions.create({
@@ -79,7 +90,7 @@ Format the response as a numbered list with each vendor's information clearly or
       success: true,
       response: aiResponse,
       vendors: vendors,
-      aiProcessing: "Vendor recommendations provided directly from OpenAI. Please upload a file with vendor email addresses to send invitations."
+      aiProcessingInfo: "Vendor recommendations provided directly from OpenAI. Only highly confident email addresses are included. For vendors without emails, please upload a file with accurate email addresses to send invitations."
     });
   } catch (error) {
     console.error('Error in getVendorRecommendations:', error);
@@ -97,6 +108,7 @@ function extractVendorsFromResponse(text: string): Vendor[] {
   const lines = text.split('\n');
   let vendorName: string = '';
   let emailAddress = '';
+  let hasExplicitEmailSection = false;
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -108,49 +120,81 @@ function extractVendorsFromResponse(text: string): Vendor[] {
     if (line.startsWith('### ')) {
       // Handle markdown headers (### Vendor Name)
       vendorName = line.substring(4).trim();
+      // Reset email for new vendor
+      emailAddress = '';
+      hasExplicitEmailSection = false;
     } else if (/^\d+\.\s+\*\*.*\*\*/.test(line)) {
       // Handle formatted vendor names (1. **Vendor Name**)
       const match = line.match(/\*\*(.*?)\*\*/);
       vendorName = match && match[1] ? match[1].trim() : '';
+      // Reset email for new vendor
+      emailAddress = '';
+      hasExplicitEmailSection = false;
     } else if (/^\d+\.\s/.test(line)) {
       // Handle plain numbered entries (1. Vendor Name)
       vendorName = line.replace(/^\d+\.\s+/, '').split(' - ')[0].trim();
+      // Reset email for new vendor
+      emailAddress = '';
+      hasExplicitEmailSection = false;
     }
     
     // Clean vendor name by removing asterisks and other markdown formatting
     vendorName = vendorName.replace(/\*\*/g, '').replace(/\*/g, '').trim();
     
-    if (!vendorName) continue;
-    
-    // Skip if this is Zak the Baker (double-check at extraction level)
-    if (vendorName.toLowerCase().includes('zak') && vendorName.toLowerCase().includes('baker')) {
-      continue;
+    // Check if this line explicitly mentions email
+    if (line.toLowerCase().includes('email') || line.toLowerCase().includes('contact')) {
+      hasExplicitEmailSection = true;
     }
     
-    // Check if we've already processed this vendor name to avoid duplicates
-    if (processedNames.has(vendorName.toLowerCase())) {
-      continue;
-    }
-    
-    // Look for email in the next few lines (up to 5 lines)
-    for (let j = i; j < Math.min(i + 5, lines.length); j++) {
-      const searchLine = lines[j];
-      const emailMatch = searchLine.match(/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/);
-      
+    // Only extract email if we haven't found one yet for this vendor
+    if (vendorName && !emailAddress) {
+      const emailMatch = line.match(/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/);
       if (emailMatch && emailMatch[1]) {
-        emailAddress = emailMatch[1];
-        break;
+        // Only use the email if it's in a line that mentions email or follows an email section marker
+        if (hasExplicitEmailSection || line.toLowerCase().includes('email')) {
+          emailAddress = emailMatch[1];
+        }
       }
     }
     
-    // Add vendor even if email is empty so we at least capture the name
-    vendors.push({
-      name: vendorName,
-      email: emailAddress
-    });
-    
-    // Remember we've processed this vendor name
-    processedNames.add(vendorName.toLowerCase());
+    // If we find a clear section break or another vendor, add the current vendor and reset
+    if ((vendorName && line.startsWith('---')) || 
+        (vendorName && i > 0 && (line.startsWith('#') || /^\d+\./.test(line))) || 
+        (i === lines.length - 1)) {
+      
+      // Check if we've already processed this vendor name to avoid duplicates
+      if (!processedNames.has(vendorName.toLowerCase())) {
+        // Skip if this is Zak the Baker (double-check at extraction level)
+        if (!(vendorName.toLowerCase().includes('zak') && vendorName.toLowerCase().includes('baker'))) {
+          // Add vendor even if email is empty so we at least capture the name
+          vendors.push({
+            name: vendorName,
+            email: emailAddress // This will be empty if no valid email was found
+          });
+          
+          // Remember we've processed this vendor name
+          processedNames.add(vendorName.toLowerCase());
+        }
+      }
+      
+      // Reset for next vendor
+      if (line.startsWith('#') || /^\d+\./.test(line)) {
+        vendorName = '';
+        emailAddress = '';
+        hasExplicitEmailSection = false;
+      }
+    }
+  }
+  
+  // Handle any remaining vendor that wasn't added in the loop
+  if (vendorName && !processedNames.has(vendorName.toLowerCase())) {
+    // Skip if this is Zak the Baker
+    if (!(vendorName.toLowerCase().includes('zak') && vendorName.toLowerCase().includes('baker'))) {
+      vendors.push({
+        name: vendorName,
+        email: emailAddress
+      });
+    }
   }
   
   return vendors;

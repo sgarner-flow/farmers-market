@@ -1,4 +1,4 @@
-e// Simple test file to check if the imports work correctly
+// Simple test file to check if the imports work correctly
 import { createStripeClient, issueVirtualCard, CardholderData } from './lib/stripe';
 
 // Just declare variables with the imported types to verify they work
