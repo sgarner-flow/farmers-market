@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { createChatCompletion } from '@/lib/openai';
 
 // Add Vendor interface
 interface Vendor {
@@ -29,17 +29,10 @@ export async function POST(request: Request) {
     // Get the address for the selected location or use a default if not found
     const marketAddress = locationAddresses[location] || '698 NE 1st Ave, Miami, FL 33132';
     
-    // Initialize OpenAI client
-    const openaiApiKey = process.env.OPENAI_API_KEY;
-    if (!openaiApiKey) {
+    // Validate OpenAI API key
+    if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({ error: 'OpenAI API key is not configured' }, { status: 500 });
     }
-    
-    const openai = new OpenAI({
-      apiKey: openaiApiKey,
-      maxRetries: 3, // Increased from 2 to 3 for more resilience
-      timeout: 58000, // Increased from 55 to 58 seconds to be just under the Vercel 60s limit
-    });
 
     // Updated prompt with stronger exclusion for Zak the Baker and better formatting guidelines
     const prompt = `Find 4 high-quality artisanal vendors for a farmers market at ${marketAddress}. Focus on sustainability, community, quality, and local engagement.
@@ -67,15 +60,11 @@ Format the response as a numbered list with each vendor's information clearly or
    - **Email**: example@vendor.com`;
 
     try {
-      // Call OpenAI with optimized parameters
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 57000); // Client-side abort just before our timeout
-      
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o", // Use GPT-4o which is generally faster than turbo-preview
-        messages: [
+      // Use our enhanced createChatCompletion function with retries and better error handling
+      const completion = await createChatCompletion(
+        [
           {
-            role: "system", 
+            role: "system",
             content: `You are an expert in local ${location}-area vendors, especially those that would be a good fit for an upscale farmers market. Provide accurate information about real vendors including their contact information if available. Format your response so each vendor listing is clear and separated, with their name, reason for selection, and contact information easily distinguishable.`
           },
           {
@@ -83,11 +72,19 @@ Format the response as a numbered list with each vendor's information clearly or
             content: prompt
           }
         ],
-        temperature: 0.5, // Lower temperature for faster, more deterministic responses
-        max_tokens: 2000,
-      });
-      
-      clearTimeout(timeoutId);
+        "gpt-3.5-turbo", // Using GPT-3.5-Turbo for faster responses and fewer timeouts
+        {
+          temperature: 0.5,
+          max_tokens: 2000,
+          apiOptions: {
+            // These options fine-tune our resilient OpenAI client
+            maxRetries: 3,        // Exactly 3 retries
+            timeoutMs: 60000,     // Full 60 second timeout
+            initialRetryDelay: 1000,
+            maxRetryDelay: 15000,
+          }
+        }
+      );
 
       const aiResponse = completion.choices[0]?.message?.content || '';
 
@@ -103,7 +100,7 @@ Format the response as a numbered list with each vendor's information clearly or
     } catch (error: any) {
       console.error('Error calling OpenAI in getVendorRecommendations:', error);
       
-      // Handle different types of OpenAI errors
+      // Enhanced error handling for different types of errors
       if (error.status === 429) {
         return NextResponse.json(
           { error: 'OpenAI rate limit exceeded. Please try again in a few moments.' },
@@ -111,7 +108,7 @@ Format the response as a numbered list with each vendor's information clearly or
         );
       } else if (error.name === 'AbortError' || error.type === 'timeout' || error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
         return NextResponse.json(
-          { error: 'Request to OpenAI timed out. The service might be experiencing high demand. Please try again.' },
+          { error: 'Request to OpenAI timed out even after multiple retries. The service might be experiencing high demand. Please try again in a few minutes.' },
           { status: 408 }
         );
       } else if (error.type === 'server_error') {

@@ -1,11 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
-import OpenAI from 'openai';
-
-// Check for OpenAI API key - but don't throw during build time
-const openai = process.env.OPENAI_API_KEY 
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  : null;
+import { createChatCompletion } from '@/lib/openai';
 
 export async function POST(request: Request) {
   console.log('reviewVendor endpoint called');
@@ -35,8 +30,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify OpenAI client is initialized at runtime
-    if (!openai) {
+    // Verify OpenAI API key is set
+    if (!process.env.OPENAI_API_KEY) {
       console.error('OPENAI_API_KEY is not set');
       // Instead of returning an error, proceed with a manual review message
       return NextResponse.json({
@@ -80,15 +75,9 @@ export async function POST(request: Request) {
       console.log(`Using model: gpt-3.5-turbo with API key: ${process.env.OPENAI_API_KEY ? 'present' : 'missing'}`);
       const openaiStartTime = Date.now();
       
-      // Create a timeout promise
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("OpenAI request timed out")), 15000); // 15 seconds
-      });
-      
-      // Race between the OpenAI request and the timeout
-      const completionPromise = openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
+      // Use our enhanced createChatCompletion function instead of directly calling OpenAI
+      const completion = await createChatCompletion(
+        [
           {
             role: "system",
             content: `You are reviewing vendor applications for a farmers market. Your task is to evaluate applications based on:
@@ -120,11 +109,18 @@ Website: ${existingApp.vendor_website || 'Not provided'}
 Provide your decision and detailed explanation.`
           }
         ],
-        max_tokens: 500
-      });
+        "gpt-3.5-turbo", // Use the same model as before
+        {
+          max_tokens: 500,
+          apiOptions: {
+            timeoutMs: 60000,    // Full 60 second timeout
+            maxRetries: 3,       // Exactly 3 retries
+            initialRetryDelay: 1000,
+            maxRetryDelay: 5000
+          }
+        }
+      );
       
-      // Wait for either the completion or the timeout
-      const completion = await Promise.race([completionPromise, timeoutPromise]) as any;
       const openaiEndTime = Date.now();
       console.log(`OpenAI response received in ${openaiEndTime - openaiStartTime}ms`);
       
@@ -252,16 +248,10 @@ Provide your decision and detailed explanation.`
       review,
       automated
     });
-
   } catch (error: any) {
-    console.error('Error in reviewVendor route:', error);
-    console.error('Error details:', {
-      message: error.message,
-      name: error.name,
-      stack: error.stack
-    });
+    console.error('Error in reviewVendor:', error);
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: 'Internal server error: ' + (error.message || 'Unknown error') },
       { status: 500 }
     );
   }

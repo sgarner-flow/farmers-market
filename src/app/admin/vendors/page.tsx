@@ -227,21 +227,39 @@ export default function AdminVendors() {
     setAiProcessingInfo('');
     
     // Show immediate feedback to user
-    toast.info('Fetching vendor recommendations... This may take up to a minute.');
+    toast.info('Fetching vendor recommendations... This may take up to a minute.', {
+      duration: 30000, // Keep the toast visible longer
+    });
     
     let retryCount = 0;
-    const maxRetries = 2;
+    const maxRetries = 3; // Exactly 3 retries for consistency
+    const initialDelayMs = 2000;
+    const maxDelayMs = 8000;
+    
+    // Calculate exponential backoff with jitter
+    const getRetryDelay = (attempt: number) => {
+      const baseDelay = Math.min(
+        maxDelayMs,
+        initialDelayMs * Math.pow(2, attempt)
+      );
+      // Add jitter to prevent multiple users retrying at exactly the same time
+      const jitter = baseDelay * 0.2 * (Math.random() * 2 - 1);
+      return Math.max(initialDelayMs, Math.floor(baseDelay + jitter));
+    };
+    
     const fetchWithRetry = async () => {
       try {
-        // Set up a timeout promise
+        // Set up a timeout promise with slightly longer duration than server (65s)
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 65000); // 65 second timeout, slightly longer than server
+        const timeoutId = setTimeout(() => controller.abort(), 65000); 
         
         // Call the API endpoint with fetch timeout
         const response = await fetch('/api/getVendorRecommendations', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
           },
           body: JSON.stringify({ location: selectedLocation }),
           signal: controller.signal
@@ -250,13 +268,26 @@ export default function AdminVendors() {
         clearTimeout(timeoutId);
         
         if (!response.ok) {
+          // Handle HTTP error codes
           if (response.status === 504 || response.status === 408) {
-            throw new Error('The request timed out. The OpenAI service may be busy. Please try again in a moment.');
+            throw new Error('The request timed out. The OpenAI service may be busy. Please try again.');
+          } else if (response.status === 429) {
+            throw new Error('Rate limit exceeded. Please wait a moment before trying again.');
+          } else if (response.status >= 500) {
+            throw new Error(`Server error (${response.status}). Please try again in a moment.`);
           }
+          
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
         
-        const data = await response.json();
+        // Try to parse the response as JSON
+        let data;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          console.error('Failed to parse JSON response:', parseError);
+          throw new Error('Invalid response format from server. Please try again.');
+        }
         
         if (data.success === false) {
           throw new Error(data.error || 'Error getting recommendations');
@@ -279,14 +310,46 @@ export default function AdminVendors() {
         toast.success('Vendor recommendations generated successfully!');
       } catch (error: any) {
         console.error('Error getting vendor recommendations:', error);
-        if ((error.name === 'AbortError' || error.message.includes('timeout') || error.message.includes('timed out')) && retryCount < maxRetries) {
+        
+        // Common timeout/network errors that warrant a retry
+        const isTimeoutError = 
+          error.name === 'AbortError' || 
+          error.message.includes('timeout') || 
+          error.message.includes('timed out') ||
+          error.code === 'ETIMEDOUT' ||
+          error.code === 'ECONNABORTED';
+          
+        // Retry logic with exponential backoff
+        if ((isTimeoutError || error.status === 429 || error.status >= 500) && retryCount < maxRetries) {
           retryCount++;
-          toast.warning(`Request timed out. Retrying (${retryCount}/${maxRetries})...`);
-          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retrying
+          const delay = getRetryDelay(retryCount);
+          
+          // Change the UI to show we're retrying
+          toast.warning(
+            <div>
+              <div>Request failed. Retrying ({retryCount}/{maxRetries})...</div>
+              <div className="mt-1 text-xs">Waiting {Math.round(delay/1000)}s before next attempt</div>
+            </div>, 
+            { duration: delay + 2000 } // Keep toast visible during wait + a bit longer
+          );
+          
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, delay));
           return fetchWithRetry();
         }
         
-        toast.error(error.message || 'Failed to get vendor recommendations');
+        // If we've exhausted retries or it's not a retryable error
+        if (retryCount >= maxRetries) {
+          toast.error(
+            <div>
+              <div>Failed after {maxRetries} attempts.</div>
+              <div className="mt-1 text-sm">The AI service may be busy. Please try again in a few minutes.</div>
+            </div>,
+            { duration: 8000 }
+          );
+        } else {
+          toast.error(error.message || 'Failed to get vendor recommendations');
+        }
       } finally {
         setIsGettingRecommendations(false);
       }
