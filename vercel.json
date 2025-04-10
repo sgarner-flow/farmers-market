@@ -11,6 +11,9 @@
   "functions": {
     "src/app/api/getVendorRecommendations/route.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/getVendorPayments/route.ts": {
+      "maxDuration": 60
     }
   }
 } 

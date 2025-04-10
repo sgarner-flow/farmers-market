@@ -322,7 +322,15 @@ export default function VendorPaymentsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8">
         <div className="md:col-span-2 px-4 sm:px-6 lg:px-8 pb-12">
           <div className="bg-[#F3EDDF] rounded-lg p-6 mb-8 shadow-sm">
-            <h1 className="text-2xl font-bold tracking-tight text-gray-800">Vendor Payments Dashboard</h1>
+            <div className="flex items-center gap-4">
+              <Link href="/admin/vendors" className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-gray-800 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#E6D5BC]">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to Vendors
+              </Link>
+              <h1 className="text-2xl font-bold tracking-tight text-gray-800">Vendor Payments Dashboard</h1>
+            </div>
           </div>
           
           <div className="bg-white shadow rounded-lg p-4 mb-6">
