@@ -254,9 +254,17 @@ export default function AdminVendors() {
         setAiProcessingInfo(data.aiProcessing);
       }
       
-      // Don't add vendors to the table from AI recommendations
+      // Add vendors to the table from the structured data
+      if (data.vendors && Array.isArray(data.vendors) && data.vendors.length > 0) {
+        setUploadedVendors(data.vendors.map((vendor: { name: string; email: string }) => ({
+          name: vendor.name || '',
+          email: vendor.email || '',
+          description: ''
+        })));
+      }
+      
       setHasRecommendations(true);
-      toast.success(`Got recommendations for ${selectedLocation}. Upload a file with emails to invite vendors.`);
+      toast.success(`Got recommendations for ${selectedLocation} with ${data.vendors?.length || 0} vendors. Review and click Send Invitations to proceed.`);
     } catch (error) {
       console.error('Error fetching recommendations:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to get recommendations');
@@ -682,7 +690,18 @@ export default function AdminVendors() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-hidden">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Invite New Vendors</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-gray-900">Invite New Vendors</h3>
+                <button
+                  onClick={() => setShowInviteModal(false)}
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                  aria-label="Close modal"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
               
               <div className="mb-6">
                 <h4 className="text-md font-medium text-gray-700 mb-2">Find Vendors with AI</h4>
@@ -747,7 +766,140 @@ export default function AdminVendors() {
                 <div className="mb-6">
                   <h4 className="text-md font-medium text-gray-700 mb-2">AI Recommendations</h4>
                   <div className="bg-gray-50 rounded-md p-4 max-h-80 overflow-y-auto">
-                    <p className="text-sm whitespace-pre-wrap">{recommendationResponse}</p>
+                    <div className="text-sm">
+                      {recommendationResponse.split('\n').map((line, index) => {
+                        // Format markdown headers (e.g., "### Vendor Name")
+                        if (/^#{1,3}\s+(.*)/.test(line)) {
+                          const headerText = line.replace(/^#{1,3}\s+/, '');
+                          return (
+                            <div key={index} className="mb-2">
+                              <h3 className="font-bold text-market-olive text-lg">{headerText}</h3>
+                            </div>
+                          );
+                        }
+                        // Format vendor names (e.g., "1. **Vendor Name**")
+                        else if (/^\d+\.\s+\*\*.*\*\*/.test(line)) {
+                          const vendorName = line.match(/\*\*(.*?)\*\*/)?.[1] || '';
+                          const restOfLine = line.replace(/^\d+\.\s+\*\*.*?\*\*/, '');
+                          return (
+                            <div key={index} className="mb-2">
+                              <h3 className="font-bold text-market-olive">{vendorName}</h3>
+                              {restOfLine && <span>{restOfLine}</span>}
+                            </div>
+                          );
+                        }
+                        // Format section titles (e.g., "**Reason for Selection**:")
+                        else if (/^\s*-\s+\*\*(.*?)\*\*:/.test(line)) {
+                          const sectionTitle = line.match(/\*\*(.*?)\*\*/)?.[1] || '';
+                          const sectionContent = line.replace(/^\s*-\s+\*\*.*?\*\*:\s*/, '');
+                          
+                          // For reasons, show without the label
+                          if (sectionTitle.toLowerCase().includes("reason") || sectionTitle.toLowerCase().includes("why")) {
+                            return (
+                              <div key={index} className="ml-4 mb-2 italic text-gray-700">
+                                {sectionContent}
+                              </div>
+                            );
+                          }
+                          
+                          // Handle email information
+                          if (sectionTitle.toLowerCase().includes("email")) {
+                            return (
+                              <div key={index} className="ml-4 mb-2">
+                                <span className="font-semibold text-market-green">{sectionTitle}: </span>
+                                <span className="text-blue-600">{sectionContent}</span>
+                              </div>
+                            );
+                          }
+                          
+                          // Handle website information
+                          if (sectionTitle.toLowerCase().includes("website")) {
+                            // Extract website URL
+                            const urlMatch = sectionContent.match(/\[(.*?)\]\((https?:\/\/[^\s\)]+)\)/);
+                            const plainUrlMatch = sectionContent.match(/\bhttps?:\/\/[^\s\)]+|\bwww\.[^\s\)]+/);
+                            
+                            if (urlMatch) {
+                              return (
+                                <div key={index} className="ml-4 mb-2">
+                                  <span className="font-semibold text-market-green">{sectionTitle}: </span>
+                                  <a 
+                                    href={urlMatch[2]} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline inline-flex items-center"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                    {urlMatch[1]}
+                                  </a>
+                                </div>
+                              );
+                            } else if (plainUrlMatch) {
+                              const url = plainUrlMatch[0].startsWith('www') ? `http://${plainUrlMatch[0]}` : plainUrlMatch[0];
+                              return (
+                                <div key={index} className="ml-4 mb-2">
+                                  <span className="font-semibold text-market-green">{sectionTitle}: </span>
+                                  <a 
+                                    href={url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline inline-flex items-center"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                    {url}
+                                  </a>
+                                </div>
+                              );
+                            } else {
+                              // No URL found or marked as N/A
+                              if (!/\b(N\/A|not available)\b/i.test(sectionContent)) {
+                                return (
+                                  <div key={index} className="ml-4 mb-2">
+                                    <span className="font-semibold text-market-green">{sectionTitle}: </span>
+                                    <span>{sectionContent}</span>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }
+                          }
+                          
+                          // Default section rendering
+                          return (
+                            <div key={index} className="ml-4 mb-2">
+                              <span className="font-semibold text-market-green">{sectionTitle}: </span>
+                              <span>{sectionContent}</span>
+                            </div>
+                          );
+                        }
+                        // Format concluding paragraph with markdown-style
+                        else if (line.includes("chosen for their commitment") || 
+                                line.includes("contribute to the upscale") ||
+                                line.includes("These vendors offer")) {
+                          return (
+                            <div key={index} className="mt-4 mb-2 px-4 py-3 bg-market-olive/10 border-l-4 border-market-olive rounded italic text-gray-700">
+                              {line}
+                            </div>
+                          );
+                        }
+                        // Handle empty lines
+                        else if (!line.trim()) {
+                          return <div key={index} className="h-2"></div>;
+                        }
+                        // Format italic text (single asterisks)
+                        else if (line.match(/\*(.*?)\*/g)) {
+                          const formattedLine = line.replace(/\*(.*?)\*/g, '<i>$1</i>');
+                          return <div key={index} className="ml-4 mb-1" dangerouslySetInnerHTML={{ __html: formattedLine }}></div>;
+                        }
+                        // Default line rendering
+                        else {
+                          return <div key={index} className="ml-4 mb-1">{line}</div>;
+                        }
+                      })}
+                    </div>
                   </div>
                   
                   {aiProcessingInfo && (
@@ -786,7 +938,7 @@ export default function AdminVendors() {
                       <tbody className="bg-white divide-y divide-gray-200">
                         {uploadedVendors.map((vendor, index) => (
                           <tr key={index}>
-                            <td className="px-4 py-2 text-sm text-gray-700">{vendor.name || 'Unknown'}</td>
+                            <td className="px-4 py-2 text-sm text-gray-700">{vendor.name?.replace(/\*\*/g, '') || 'Unknown'}</td>
                             <td className="px-4 py-2 text-sm text-gray-700">
                               {vendor.email ? vendor.email : (
                                 <span className="text-amber-600 text-xs">No email - upload file with emails to invite vendors</span>

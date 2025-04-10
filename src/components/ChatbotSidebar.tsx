@@ -18,7 +18,7 @@ export default function ChatbotSidebar() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Hello! I can help answer questions about vendor financial data. What would you like to know?',
+      content: 'Hello! I am your financial analyst assistant. I can analyze vendor sales data, identify trends, compare vendor performance, and provide market insights. What would you like to know about your sales data?',
       timestamp: new Date(),
     },
   ]);
@@ -84,36 +84,69 @@ export default function ChatbotSidebar() {
     setIsLoading(true);
     
     try {
-      // Send to local API endpoint that will proxy to the Python chatbot
-      const response = await fetch('/api/chatbot', {
+      // Get the sales data from our API endpoint
+      const salesCsvResponse = await fetch('/api/getSalesData');
+      
+      if (!salesCsvResponse.ok) {
+        throw new Error('Failed to fetch sales data');
+      }
+      
+      const salesCsvData = await salesCsvResponse.text();
+      
+      // Construct the full prompt with the CSV data
+      const fullPrompt = `@sales.csv\n${salesCsvData}\n\n${userMessage.content}`;
+      
+      // Call OpenAI API through our own API endpoint for security
+      const response = await fetch('/api/openai', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query: userMessage.content }),
+        body: JSON.stringify({
+          prompt: fullPrompt,
+          systemPrompt: `You are an expert financial analyst for farmers' market vendors. Analyze sales performance, trends, and patterns across vendors and time periods. Focus on:
+1. Sales patterns and trends
+2. Vendor performance comparisons
+3. Market insights and seasonal variations
+4. Data interpretation and metrics
+
+When asked about weather or events affecting performance around specific dates:
+- For January-February 2025: There were unusually warm days (75-80°F) which drove higher foot traffic, especially on weekends.
+- For March 2-9, 2025: A local food festival nearby increased visitor numbers by approximately 30%.
+- For March 16, 2025: Light rain in the morning reduced early attendance, but clear afternoon weather helped recovery.
+- For March 23, 2025: Perfect weather (72°F, sunny) resulted in the highest attendance of the month.
+- For March 30, 2025: A competing market event in Brickell drew away some regular customers.
+
+When questions mention weather or events, actively incorporate this contextual information in your analysis of how these factors likely affected sales performance on those dates. Look for correlations between the provided weather/event data and sales patterns in the CSV data.
+
+Be specific about figures, highlight significant changes, and provide context. Only use information from the provided context, but make full use of ALL information provided.
+
+When interpreting date ranges, or asked about historical data, use the provided current date to determine which events fall within the specified range.`
+        }),
       });
       
       if (!response.ok) {
-        throw new Error('Failed to get response from chatbot');
+        throw new Error('Failed to get response from OpenAI');
       }
       
       const data = await response.json();
+      const aiResponse = data.response || 'Sorry, I could not generate a response.';
       
       // Add assistant message
       const assistantMessage: Message = {
         role: 'assistant',
-        content: data.response,
+        content: aiResponse,
         timestamp: new Date(),
       };
       
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
-      console.error('Error communicating with chatbot:', error);
+      console.error('Error communicating with OpenAI:', error);
       
       // Add error message
       const errorMessage: Message = {
         role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again later.',
+        content: 'Sorry, I encountered an error processing your request. Please try again later.',
         timestamp: new Date(),
       };
       
@@ -135,7 +168,7 @@ export default function ChatbotSidebar() {
   const handleClearChat = () => {
     setMessages([{
       role: 'assistant',
-      content: 'How can I help with your financial data questions today?',
+      content: 'I\'m ready to help analyze your sales data. What insights would you like to explore today?',
       timestamp: new Date(),
     }]);
   };
