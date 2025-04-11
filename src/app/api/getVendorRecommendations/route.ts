@@ -203,7 +203,7 @@ function extractVendorsFromResponse(text: string): Vendor[] {
     
     // Check for numbered vendor pattern to detect the start of a new vendor
     const vendorNumberPattern = /^\d+\.\s+(?:\*\*)?([^*:]+)(?:\*\*)?:?(.*)$/;
-    const vendorTitlePattern = /^\d+\.\s+\*\*([^*]+)\*\*(.*)$/;
+    const vendorTitlePattern = /^\d+\.\s+\*\*([^*:]+)\*\*(.*)$/;
     const vendorSimplePattern = /^\d+\.\s+([^:]+)$/;
 
     // Check if this is a new vendor section
@@ -217,7 +217,7 @@ function extractVendorsFromResponse(text: string): Vendor[] {
           
           // Assign the accumulated description
           if (descriptionLines.length > 0) {
-            currentVendor.description = descriptionLines.join(' ').trim();
+            currentVendor.description = descriptionLines.join(' ').trim().replace(/^:\s*/, '');
           }
           
           // Add vendor with description and reset processed names to avoid duplicates
@@ -260,7 +260,7 @@ function extractVendorsFromResponse(text: string): Vendor[] {
       }
       
       // Clean vendor name and check exclusions
-      vendorName = vendorName.replace(/\*\*/g, '').trim();
+      vendorName = vendorName.replace(/\*\*/g, '').replace(/:/g, '').trim();
       
       // Skip this vendor if it's Zak the Baker
       if (vendorName.toLowerCase().includes('zak') || 
@@ -273,8 +273,9 @@ function extractVendorsFromResponse(text: string): Vendor[] {
       
       currentVendor.name = vendorName;
       
-      // If we have an initial description, add it
+      // If we have an initial description, add it (remove leading colon and space if present)
       if (initialDescription) {
+        initialDescription = initialDescription.replace(/^:\s*/, '').trim();
         descriptionLines.push(initialDescription);
       }
       
@@ -301,7 +302,7 @@ function extractVendorsFromResponse(text: string): Vendor[] {
             
             // Assign the accumulated description
             if (descriptionLines.length > 0) {
-              currentVendor.description = descriptionLines.join(' ').trim();
+              currentVendor.description = descriptionLines.join(' ').trim().replace(/^:\s*/, '');
             }
             
             // Add vendor with description
@@ -346,7 +347,7 @@ function extractVendorsFromResponse(text: string): Vendor[] {
       
       // Assign the accumulated description
       if (descriptionLines.length > 0) {
-        currentVendor.description = descriptionLines.join(' ').trim();
+        currentVendor.description = descriptionLines.join(' ').trim().replace(/^:\s*/, '');
       }
       
       // Add vendor with description if not already processed
