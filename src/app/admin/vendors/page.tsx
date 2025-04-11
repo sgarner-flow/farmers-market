@@ -865,11 +865,11 @@ export default function AdminVendors() {
                         // Format vendor names (e.g., "1. **Vendor Name**")
                         else if (/^\d+\.\s+\*\*.*\*\*/.test(line)) {
                           const vendorName = line.match(/\*\*(.*?)\*\*/)?.[1] || '';
-                          const restOfLine = line.replace(/^\d+\.\s+\*\*.*?\*\*/, '');
+                          const restOfLine = line.replace(/^\d+\.\s+\*\*.*?\*\*/, '').trim();
                           return (
                             <div key={index} className="mb-2">
                               <h3 className="font-bold text-market-olive">{vendorName}</h3>
-                              {restOfLine && <span>{restOfLine}</span>}
+                              {restOfLine && <p className="ml-4 text-gray-700 italic">{restOfLine}</p>}
                             </div>
                           );
                         }
@@ -878,11 +878,12 @@ export default function AdminVendors() {
                           const sectionTitle = line.match(/\*\*(.*?)\*\*/)?.[1] || '';
                           const sectionContent = line.replace(/^\s*-\s+\*\*.*?\*\*:\s*/, '');
                           
-                          // For reasons, show without the label
+                          // For reasons, show with a special styling to make it stand out
                           if (sectionTitle.toLowerCase().includes("reason") || sectionTitle.toLowerCase().includes("why")) {
                             return (
-                              <div key={index} className="ml-4 mb-2 italic text-gray-700">
-                                {sectionContent}
+                              <div key={index} className="ml-4 mb-2 p-2 bg-market-olive/10 border-l-2 border-market-green rounded-r-md">
+                                <span className="font-semibold text-market-green">Why recommended: </span>
+                                <span className="text-gray-700">{sectionContent}</span>
                               </div>
                             );
                           }
@@ -1017,7 +1018,7 @@ export default function AdminVendors() {
                         <tr>
                           <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                           <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/2">Description/Reason</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -1029,13 +1030,15 @@ export default function AdminVendors() {
                                 <span className="text-amber-600 text-xs">No email - upload file with emails to invite vendors</span>
                               )}
                             </td>
-                            <td className="px-4 py-2 text-xs">
-                              {vendor.description === 'Found with AI' ? (
+                            <td className="px-4 py-2">
+                              {vendor.description ? (
+                                <p className="text-sm text-gray-700">{vendor.description}</p>
+                              ) : vendor.description === 'Found with AI' ? (
                                 <span className="text-green-600">{vendor.description}</span>
                               ) : vendor.description === 'AI-generated email' ? (
                                 <span className="text-amber-600">{vendor.description}</span>
                               ) : (
-                                <span className="text-gray-500">{vendor.description}</span>
+                                <span className="text-gray-500 text-xs italic">No description available</span>
                               )}
                             </td>
                           </tr>

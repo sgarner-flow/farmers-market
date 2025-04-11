@@ -5,6 +5,7 @@ import { createChatCompletion } from '@/lib/openai';
 interface Vendor {
   name: string;
   email: string;
+  description?: string; // Add description field to hold the reason for recommending the vendor
 }
 
 export async function POST(request: Request) {
@@ -35,22 +36,31 @@ export async function POST(request: Request) {
     }
 
     // Updated prompt with stronger exclusion for Zak the Baker and better formatting guidelines
-    const prompt = `Find 4 high-quality artisanal vendors for a farmers market at ${marketAddress}. Focus on sustainability, community, quality, and local engagement.
+    const prompt = `Find 4 high-quality artisanal vendors SPECIFICALLY for a farmers market at ${marketAddress} in ${location}, Florida. These must be REAL vendors actually located in or near ${location}, not generic examples.
 
-For each vendor, provide:
-1. The vendor name with a brief explanation of why you're recommending them.
+Focus on vendors who exemplify:
+- Strong connection to the ${location} area
+- Sustainability and environmentally conscious practices
+- High-quality artisanal production methods
+- Community engagement and local sourcing
+
+For each REAL ${location} area vendor, provide:
+1. The vendor name with a SPECIFIC explanation of why you're recommending them and what makes them unique to ${location}.
 2. Their website as a proper markdown link like [Vendor Name](https://website.com).
 3. Email address ONLY if you are more than 80% confident it is correct. Prioritize official sources such as:
    - The vendor's contact page on their official website.
    - Email addresses listed on their official social media profiles.
    - Verified business directories with official listings.
 
-#### Important Guidelines:
-- Double-check the vendor's website and social media for contact information, especially on the **Contact**, **About**, or **Support** pages.
-- Do NOT include "Zak the Baker" or any variation of that name in your recommendations under any circumstances. This vendor must be completely excluded.
-- If an email address cannot be confidently verified as correct, omit it.
-- For emails: DO NOT guess or fabricate. Include only those verified from reliable sources.
-- For websites: Always present them as clickable markdown links.
+#### IMPORTANT EXCLUSION RULE:
+- CRITICAL: "Zak the Baker" or any variation of that name MUST NOT BE MENTIONED AT ALL in your response, even to note it's excluded. Do not list this vendor in any form. Simply provide 4 other vendors without any reference to Zak the Baker whatsoever.
+
+#### Additional Guidelines:
+- Provide ONLY real, verifiable businesses from the ${location} area - not hypothetical or generic examples
+- Be detailed and specific about why each vendor would be a good fit for THIS market in ${location}
+- Double-check the vendor's website and social media for contact information
+- If an email address cannot be confidently verified as correct, omit it
+- For websites: Always present them as clickable markdown links
 
 Format the response as a numbered list with each vendor's information clearly organized using markdown formatting.
 
@@ -65,16 +75,27 @@ Format the response as a numbered list with each vendor's information clearly or
         [
           {
             role: "system",
-            content: `You are an expert in local ${location}-area vendors, especially those that would be a good fit for an upscale farmers market. Provide accurate information about real vendors including their contact information if available. Format your response so each vendor listing is clear and separated, with their name, reason for selection, and contact information easily distinguishable.`
+            content: `You are an expert in local food vendors and artisanal producers in the ${location}, Florida area.
+
+Your task is to recommend authentic, high-quality vendors specifically located in or near ${location} that would be perfect for an upscale farmers market. 
+
+Provide only real, verifiable vendors that actually exist in this specific location. Each recommendation must be:
+1. A real business that operates in the ${location} area
+2. Known for high-quality, artisanal, or sustainably-produced goods
+3. Actually located in or near ${location}, not just a generic or national brand
+
+Be specific about why each vendor would be a good fit for the market, mentioning their unique products, sustainable practices, or connection to the local community.
+
+Format your response clearly, with vendor name, description of why they're recommended, website link, and email if confidently known.`
           },
           {
             role: "user",
             content: prompt
           }
         ],
-        "gpt-3.5-turbo", // Using GPT-3.5-Turbo for faster responses and fewer timeouts
+        "gpt-3.5-turbo", // Using GPT-3.5-Turbo for faster responses
         {
-          temperature: 0.5,
+          temperature: 0.7, // Increased for more variation and location-specific responses
           max_tokens: 2000,
           apiOptions: {
             // These options fine-tune our resilient OpenAI client
@@ -91,11 +112,21 @@ Format the response as a numbered list with each vendor's information clearly or
       // Extract vendor information to allow for easy form filling
       const vendors = extractVendorsFromResponse(aiResponse);
 
+      // Create appropriate processing info based on whether vendors were found
+      let processingInfo = "";
+      if (vendors.length === 0 || (vendors.length === 1 && vendors[0].name?.includes("unable to provide"))) {
+        processingInfo = `Our AI system was unable to find specific vendors for ${location}. This could be due to limited data about this location. Try a different location or try again later.`;
+      } else if (vendors.length < 4) {
+        processingInfo = `Found ${vendors.length} local vendors for ${location}. For best results, you can upload a CSV file with additional vendors' email addresses.`;
+      } else {
+        processingInfo = `Found ${vendors.length} local vendors for ${location}. These recommendations are based on publicly available information about real businesses in this area. Only highly confident email addresses are included.`;
+      }
+
       return NextResponse.json({
         success: true,
         response: aiResponse,
         vendors: vendors,
-        aiProcessingInfo: "Vendor recommendations provided directly from OpenAI. Only highly confident email addresses are included. For vendors without emails, please upload a file with accurate email addresses to send invitations."
+        aiProcessingInfo: processingInfo
       });
     } catch (error: any) {
       console.error('Error calling OpenAI in getVendorRecommendations:', error);
@@ -135,11 +166,34 @@ Format the response as a numbered list with each vendor's information clearly or
 function extractVendorsFromResponse(text: string): Vendor[] {
   const vendors: Vendor[] = [];
   const processedNames = new Set<string>(); // Track processed vendor names to avoid duplicates
+
+  // First, check for any mention of Zak the Baker in the entire text and ignore the entire response if found
+  if (text.toLowerCase().includes('zak') && text.toLowerCase().includes('baker')) {
+    console.warn('Response contains mention of Zak the Baker despite explicit instructions to exclude it');
+    // Skip the entire vendor and add a warning note for the UI
+    vendors.push({
+      name: 'Warning: Response includes excluded vendor',
+      email: 'Please regenerate recommendations'
+    });
+    return vendors;
+  }
+  
+  // Check if we got a response that's just a generic template without real vendors
+  if (text.toLowerCase().includes('i cannot provide specific') || 
+      text.toLowerCase().includes('i don\'t have access to') ||
+      text.toLowerCase().includes('i cannot access current information')) {
+    console.warn('Response indicates inability to provide location-specific vendors');
+    vendors.push({
+      name: 'Note: AI unable to provide location-specific vendors',
+      email: 'Please try a different location or regenerate'
+    });
+    return vendors;
+  }
   
   const lines = text.split('\n');
-  let vendorName: string = '';
-  let emailAddress = '';
-  let hasExplicitEmailSection = false;
+  let currentVendor: Partial<Vendor> = {};
+  let inVendorSection = false;
+  let descriptionLines: string[] = [];
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -147,84 +201,158 @@ function extractVendorsFromResponse(text: string): Vendor[] {
     // Skip empty lines
     if (!line) continue;
     
-    // Check for vendor name patterns
-    if (line.startsWith('### ')) {
-      // Handle markdown headers (### Vendor Name)
-      vendorName = line.substring(4).trim();
-      // Reset email for new vendor
-      emailAddress = '';
-      hasExplicitEmailSection = false;
-    } else if (/^\d+\.\s+\*\*.*\*\*/.test(line)) {
-      // Handle formatted vendor names (1. **Vendor Name**)
-      const match = line.match(/\*\*(.*?)\*\*/);
-      vendorName = match && match[1] ? match[1].trim() : '';
-      // Reset email for new vendor
-      emailAddress = '';
-      hasExplicitEmailSection = false;
-    } else if (/^\d+\.\s/.test(line)) {
-      // Handle plain numbered entries (1. Vendor Name)
-      vendorName = line.replace(/^\d+\.\s+/, '').split(' - ')[0].trim();
-      // Reset email for new vendor
-      emailAddress = '';
-      hasExplicitEmailSection = false;
-    }
-    
-    // Clean vendor name by removing asterisks and other markdown formatting
-    vendorName = vendorName.replace(/\*\*/g, '').replace(/\*/g, '').trim();
-    
-    // Check if this line explicitly mentions email
-    if (line.toLowerCase().includes('email') || line.toLowerCase().includes('contact')) {
-      hasExplicitEmailSection = true;
-    }
-    
-    // Only extract email if we haven't found one yet for this vendor
-    if (vendorName && !emailAddress) {
-      const emailMatch = line.match(/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/);
-      if (emailMatch && emailMatch[1]) {
-        // Only use the email if it's in a line that mentions email or follows an email section marker
-        if (hasExplicitEmailSection || line.toLowerCase().includes('email')) {
-          emailAddress = emailMatch[1];
-        }
-      }
-    }
-    
-    // If we find a clear section break or another vendor, add the current vendor and reset
-    if ((vendorName && line.startsWith('---')) || 
-        (vendorName && i > 0 && (line.startsWith('#') || /^\d+\./.test(line))) || 
-        (i === lines.length - 1)) {
-      
-      // Check if we've already processed this vendor name to avoid duplicates
-      if (!processedNames.has(vendorName.toLowerCase())) {
-        // Skip if this is Zak the Baker (double-check at extraction level)
-        if (!(vendorName.toLowerCase().includes('zak') && vendorName.toLowerCase().includes('baker'))) {
-          // Add vendor even if email is empty so we at least capture the name
-          vendors.push({
-            name: vendorName,
-            email: emailAddress // This will be empty if no valid email was found
-          });
+    // Check for numbered vendor pattern to detect the start of a new vendor
+    const vendorNumberPattern = /^\d+\.\s+(?:\*\*)?([^*:]+)(?:\*\*)?:?(.*)$/;
+    const vendorTitlePattern = /^\d+\.\s+\*\*([^*]+)\*\*(.*)$/;
+    const vendorSimplePattern = /^\d+\.\s+([^:]+)$/;
+
+    // Check if this is a new vendor section
+    if (vendorNumberPattern.test(line) || vendorTitlePattern.test(line) || vendorSimplePattern.test(line)) {
+      // Save previous vendor if we were processing one
+      if (currentVendor.name && currentVendor.name.trim() !== '') {
+        // Final check to ensure this isn't Zak the Baker in any form
+        if (!(currentVendor.name.toLowerCase().includes('zak') || 
+              currentVendor.name.toLowerCase().includes('baker') || 
+              currentVendor.name.toLowerCase().includes('excluded'))) {
           
-          // Remember we've processed this vendor name
-          processedNames.add(vendorName.toLowerCase());
+          // Assign the accumulated description
+          if (descriptionLines.length > 0) {
+            currentVendor.description = descriptionLines.join(' ').trim();
+          }
+          
+          // Add vendor with description and reset processed names to avoid duplicates
+          if (!processedNames.has(currentVendor.name.toLowerCase())) {
+            vendors.push(currentVendor as Vendor);
+            processedNames.add(currentVendor.name.toLowerCase());
+          }
         }
       }
       
-      // Reset for next vendor
-      if (line.startsWith('#') || /^\d+\./.test(line)) {
-        vendorName = '';
-        emailAddress = '';
-        hasExplicitEmailSection = false;
+      // Start processing a new vendor
+      currentVendor = { email: '' };
+      descriptionLines = [];
+      inVendorSection = true;
+      
+      // Extract the vendor name based on which pattern matched
+      let vendorName = '';
+      let initialDescription = '';
+      
+      if (vendorTitlePattern.test(line)) {
+        // Format: "1. **Vendor Name** rest of description"
+        const matches = line.match(vendorTitlePattern);
+        if (matches && matches.length > 1) {
+          vendorName = matches[1].trim();
+          initialDescription = matches[2].trim();
+        }
+      } else if (vendorNumberPattern.test(line)) {
+        // Format: "1. Vendor Name: description"
+        const matches = line.match(vendorNumberPattern);
+        if (matches && matches.length > 2) {
+          vendorName = matches[1].trim();
+          initialDescription = matches[2].trim();
+        }
+      } else if (vendorSimplePattern.test(line)) {
+        // Format: "1. Vendor Name"
+        const matches = line.match(vendorSimplePattern);
+        if (matches && matches.length > 1) {
+          vendorName = matches[1].trim();
+        }
+      }
+      
+      // Clean vendor name and check exclusions
+      vendorName = vendorName.replace(/\*\*/g, '').trim();
+      
+      // Skip this vendor if it's Zak the Baker
+      if (vendorName.toLowerCase().includes('zak') || 
+          vendorName.toLowerCase().includes('baker') || 
+          vendorName.toLowerCase().includes('excluded')) {
+        inVendorSection = false;
+        currentVendor = {};
+        continue;
+      }
+      
+      currentVendor.name = vendorName;
+      
+      // If we have an initial description, add it
+      if (initialDescription) {
+        descriptionLines.push(initialDescription);
+      }
+      
+      continue;
+    }
+    
+    // If we're in a vendor section, capture additional info
+    if (inVendorSection) {
+      // Check for email pattern
+      const emailMatch = line.match(/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/);
+      if (emailMatch && (line.toLowerCase().includes('email') || line.toLowerCase().includes('contact'))) {
+        currentVendor.email = emailMatch[1];
+        continue;
+      }
+      
+      // Check if this line starts a new vendor or is a metadata marker
+      if (line.startsWith('###') || line.match(/^\d+\./)) {
+        // This is a new vendor section, process the previous one
+        if (currentVendor.name && currentVendor.name.trim() !== '') {
+          // Final check to ensure this isn't Zak the Baker in any form
+          if (!(currentVendor.name.toLowerCase().includes('zak') || 
+                currentVendor.name.toLowerCase().includes('baker') || 
+                currentVendor.name.toLowerCase().includes('excluded'))) {
+            
+            // Assign the accumulated description
+            if (descriptionLines.length > 0) {
+              currentVendor.description = descriptionLines.join(' ').trim();
+            }
+            
+            // Add vendor with description
+            if (!processedNames.has(currentVendor.name.toLowerCase())) {
+              vendors.push(currentVendor as Vendor);
+              processedNames.add(currentVendor.name.toLowerCase());
+            }
+          }
+        }
+        
+        // Reset for the next vendor
+        currentVendor = { email: '' };
+        descriptionLines = [];
+        inVendorSection = false;
+        i--; // Reprocess this line in the next iteration
+        continue;
+      }
+      
+      // Skip website or format markers but keep capturing descriptions
+      if (line.toLowerCase().includes('website:') || 
+          line.toLowerCase().includes('email:') || 
+          line.startsWith('-') || line.startsWith('*')) {
+        continue;
+      }
+      
+      // If we get here, this line is likely part of the description
+      if (line.trim() !== '' && 
+          !line.toLowerCase().includes('website') && 
+          !line.toLowerCase().includes('email') &&
+          !line.match(/^\d+\./)) {
+        descriptionLines.push(line);
       }
     }
   }
   
-  // Handle any remaining vendor that wasn't added in the loop
-  if (vendorName && !processedNames.has(vendorName.toLowerCase())) {
-    // Skip if this is Zak the Baker
-    if (!(vendorName.toLowerCase().includes('zak') && vendorName.toLowerCase().includes('baker'))) {
-      vendors.push({
-        name: vendorName,
-        email: emailAddress
-      });
+  // Add the final vendor if there is one being processed
+  if (currentVendor.name && currentVendor.name.trim() !== '') {
+    // Final check to ensure this isn't Zak the Baker in any form
+    if (!(currentVendor.name.toLowerCase().includes('zak') || 
+          currentVendor.name.toLowerCase().includes('baker') || 
+          currentVendor.name.toLowerCase().includes('excluded'))) {
+      
+      // Assign the accumulated description
+      if (descriptionLines.length > 0) {
+        currentVendor.description = descriptionLines.join(' ').trim();
+      }
+      
+      // Add vendor with description if not already processed
+      if (!processedNames.has(currentVendor.name.toLowerCase())) {
+        vendors.push(currentVendor as Vendor);
+      }
     }
   }
   
