@@ -358,8 +358,6 @@ Flow Farmers Market Team`;
             </CardHeader>
             <CardContent>
               <Textarea
-                placeholder="Mother Kombucha&#9;info@motherkombucha.com&#9;@https://motherkombucha.com
-Marando Farms&#9;info@marandoranch.com&#9;@https://www.marandoranch.com"
                 value={bulkInput}
                 onChange={(e) => setBulkInput(e.target.value)}
                 className="min-h-[150px] font-mono"
