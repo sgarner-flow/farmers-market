@@ -95,6 +95,7 @@ export default function AdminLayout({
   const navLinks = [
     { href: '/admin', label: 'Dashboard' },
     { href: '/admin/vendors', label: 'Vendors' },
+    { href: '/admin/vendor-invites', label: 'Vendor Invites' },
     { href: '/admin/mailing-list', label: 'Mailing List' },
     { href: '/vendor-dashboard/payments', label: 'Payments' },
   ];

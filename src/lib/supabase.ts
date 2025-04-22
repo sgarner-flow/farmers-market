@@ -94,7 +94,7 @@ export type Database = {
           organic_pesticide_free: 'Yes' | 'Some' | 'No';
           eco_friendly_packaging: 'Yes' | 'Working on it' | 'No';
           email: string;
-          status: 'pending' | 'approved' | 'rejected' | 'removed' | 'invited';
+          status: 'pending' | 'approved' | 'rejected' | 'removed' | 'invited' | 'Reviewed';
           review_notes?: string;
           stripe_customer_id?: string;
           stripe_account_id?: string;
@@ -114,7 +114,7 @@ export type Database = {
           organic_pesticide_free: 'Yes' | 'Some' | 'No';
           eco_friendly_packaging: 'Yes' | 'Working on it' | 'No';
           email: string;
-          status?: 'pending' | 'approved' | 'rejected' | 'removed' | 'invited';
+          status?: 'pending' | 'approved' | 'rejected' | 'removed' | 'invited' | 'Reviewed';
           review_notes?: string;
           stripe_customer_id?: string;
           stripe_account_id?: string;
@@ -134,7 +134,7 @@ export type Database = {
           organic_pesticide_free?: 'Yes' | 'Some' | 'No';
           eco_friendly_packaging?: 'Yes' | 'Working on it' | 'No';
           email?: string;
-          status?: 'pending' | 'approved' | 'rejected' | 'removed' | 'invited';
+          status?: 'pending' | 'approved' | 'rejected' | 'removed' | 'invited' | 'Reviewed';
           review_notes?: string;
           stripe_customer_id?: string;
           stripe_account_id?: string;
